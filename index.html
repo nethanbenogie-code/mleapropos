@@ -865,7 +865,7 @@
     // LICENSE ACTIVATION SYSTEM
     // ═══════════════════════════════════════════
 
-    const LICENSE_SERVER = 'https://script.google.com/macros/s/AKfycbyWxI4a1HDlc8N-sQnLKpOtbImJ3AoUN2O6Yw0f8Bd5p961BbB3qOFtjKU5LkHt7DtB/exec';
+    const LICENSE_SERVER = 'https://script.google.com/macros/s/AKfycby1QlCg9jzpXmxtE1N-5w7b4CuGa0TT5gcfwYrx-0yetL4iI5s86ZX8NyLhDwo4tLJX/exec';
     const DEMO_KEY = 'MLEA-DEMO-UNLOCK-KEY1';
 
     // Generate device fingerprint
@@ -951,7 +951,7 @@
 
     // Handle activation button click
         // Handle activation button click
-    async function handleActivation() {
+        async function handleActivation() {
       const input = document.getElementById('licenseInput');
       const statusEl = document.getElementById('activationStatus');
       const btn = document.getElementById('activateBtn');
@@ -969,9 +969,8 @@
 
       const deviceId = getDeviceId();
 
-      // Try POST first, fall back to GET if CORS blocks it
       try {
-        let response = await fetch(LICENSE_SERVER, {
+        const response = await fetch(LICENSE_SERVER, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -981,35 +980,41 @@
           })
         });
 
-        // If POST fails with CORS, try GET
-        if (!response.ok && response.type === 'opaque') {
-          throw new Error('CORS blocked POST, trying GET');
-        }
-
         const result = await response.json();
-        handleActivationResult(result, key);
         
-      } catch (postError) {
-        console.warn('POST failed, trying GET method:', postError.message);
-        
+        if (result.success) {
+          setActivated(key);
+          statusEl.textContent = '✅ ' + result.message + ' Welcome, ' + (result.customer || 'User') + '!';
+          statusEl.className = 'activation-status success';
+          showToast('🎉 License activated! All features unlocked.');
+        } else {
+          statusEl.textContent = '❌ ' + result.message;
+          statusEl.className = 'activation-status error';
+        }
+      } catch (error) {
+        // Fallback: try GET request
         try {
-          // Fallback: use GET request
           const getUrl = LICENSE_SERVER + '?action=activate&licenseKey=' + encodeURIComponent(key) + '&deviceId=' + encodeURIComponent(deviceId);
           const getResponse = await fetch(getUrl);
           const result = await getResponse.json();
-          handleActivationResult(result, key);
           
+          if (result.success) {
+            setActivated(key);
+            statusEl.textContent = '✅ ' + result.message + ' Welcome, ' + (result.customer || 'User') + '!';
+            statusEl.className = 'activation-status success';
+            showToast('🎉 License activated!');
+          } else {
+            statusEl.textContent = '❌ ' + result.message;
+            statusEl.className = 'activation-status error';
+          }
         } catch (getError) {
-          console.error('GET also failed:', getError);
-          
-          // Final fallback: offline demo key
           if (key === DEMO_KEY) {
             setActivated(key);
-            statusEl.textContent = '⚠️ Server unreachable — activated offline (demo only)';
+            statusEl.textContent = '⚠️ Offline mode — demo activated';
             statusEl.className = 'activation-status success';
-            showToast('📡 Offline mode — demo activated');
+            showToast('📡 Offline mode');
           } else {
-            statusEl.textContent = '❌ Cannot reach license server. Check your internet.';
+            statusEl.textContent = '❌ Cannot reach server. Check your internet.';
             statusEl.className = 'activation-status error';
           }
         }
