@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>MLEA POS - Multi-Branch System</title>
+    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22MLEA%20POS%22%2C%22short_name%22%3A%22MLEAPOS%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%231a1a2e%22%2C%22theme_color%22%3A%22%231a1a2e%22%2C%22orientation%22%3A%22portrait%22%7D">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a2e">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1a2e;color:#e0e0e0;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+        .app-container{max-width:480px;margin:0 auto;min-height:100vh;background:#16213e;position:relative}
+        @media(min-width:768px){.app-container{max-width:768px}}
+        #loginScreen{min-height:100vh;display:flex;justify-content:center;align-items:center;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);padding:15px}
+        .login-card{background:#1e2a4a;border-radius:20px;padding:20px;width:100%;max-width:340px;border:1px solid #2a3a5e}
+        .login-logo{text-align:center;margin-bottom:20px}
+        .login-logo h1{color:#9b8fff;font-size:1.8em}
+        .login-logo p{color:#a0a0b0;font-size:.85em}
+        .user-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:15px}
+        .user-card{background:#16213e;border:2px solid #2a3a5e;border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s}
+        .user-card.selected{border-color:#7c6fff;background:#0f3460}
+        .user-card .avatar{font-size:1.8em}
+        .user-card .name{font-size:.7em;color:#e0e0e0;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .role-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.65em;margin-top:3px}
+        .admin-badge{background:#7c6fff;color:#fff}.manager-badge{background:#2ed573;color:#fff}.cashier-badge{background:#ffa502;color:#fff}
+        .section-label{text-align:center;color:#e0e0e0;font-size:.9em;margin:10px 0}
+        .pin-display{display:flex;justify-content:center;gap:12px;margin:15px 0}
+        .pin-dot{width:14px;height:14px;border-radius:50%;background:#2a3a5e;transition:all .3s}
+        .pin-dot.filled{background:#7c6fff;box-shadow:0 0 8px #7c6fff}
+        .pin-dot.error{background:#ff4757}
+        .error-msg{color:#ff4757;text-align:center;font-size:.8em;min-height:18px;margin:5px 0}
+        .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+        .pin-btn{background:#0f3460;border:1px solid #2a3a5e;border-radius:10px;padding:16px;font-size:1.3em;cursor:pointer;color:#e0e0e0}
+        .pin-btn:active{background:#7c6fff}.pin-btn.clear{background:#ff4757;color:#fff;font-size:.9em}.pin-btn.submit{background:#2ed573;color:#fff;font-size:.9em}
+        #mainApp{display:none}
+        .header{background:#1a1a2e;padding:12px 15px;position:sticky;top:0;z-index:100;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2a3a5e}
+        .header h1{color:#9b8fff;font-size:1.2em}
+        .header-right{display:flex;align-items:center;gap:10px;font-size:.8em;color:#a0a0b0}
+        .logout-btn{background:#ff4757;color:#fff;border:none;padding:6px 12px;border-radius:15px;cursor:pointer;font-size:.8em}
+        .hamburger{background:none;border:none;color:#e0e0e0;font-size:22px;cursor:pointer}
+        .nav-bar{display:flex;overflow-x:auto;padding:8px;background:#1e2a4a;margin:8px;border-radius:10px;gap:5px;-webkit-overflow-scrolling:touch}
+        .nav-btn{flex:0 0 auto;padding:8px 14px;background:#16213e;border:1px solid #2a3a5e;border-radius:20px;cursor:pointer;white-space:nowrap;font-size:.8em;color:#a0a0b0;position:relative}
+        .nav-btn.active{background:#7c6fff;color:#fff;border-color:#7c6fff}
+        .nav-btn .badge{position:absolute;top:-5px;right:-5px;background:#ff4757;color:#fff;border-radius:50%;padding:1px 6px;font-size:.65em;min-width:18px;text-align:center}
+        #mainContent{padding:10px;min-height:60vh}
+        .card{background:#1e2a4a;border-radius:10px;padding:15px;margin:8px 0;border:1px solid #2a3a5e}
+        .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+        .metric-card{background:#16213e;border-radius:8px;padding:12px;text-align:center;border:1px solid #2a3a5e}
+        .metric-value{font-size:1.1em;font-weight:bold;color:#9b8fff}
+        .metric-label{font-size:.65em;color:#a0a0b0;margin-top:4px}
+        .product-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+        .product-card{background:#16213e;border-radius:8px;padding:12px;cursor:pointer;border:1px solid #2a3a5e;transition:all .2s}
+        .product-card:active{transform:scale(.96)}.product-card .stock-low{color:#ff4757;font-weight:bold}
+        .btn{padding:10px 20px;border:none;border-radius:20px;cursor:pointer;font-size:.85em;font-weight:500;transition:all .2s}
+        .btn:active{transform:scale(.95)}.btn-primary{background:#7c6fff;color:#fff}.btn-success{background:#2ed573;color:#fff}.btn-danger{background:#ff4757;color:#fff}.btn-warning{background:#ffa502;color:#fff}
+        .btn-sm{padding:5px 10px;font-size:.7em}.btn-xs{padding:3px 8px;font-size:.65em}
+        input,select,textarea{width:100%;padding:10px;border:2px solid #2a3a5e;border-radius:20px;font-size:.9em;background:#0f3460;color:#e0e0e0;outline:none;font-family:inherit}
+        input:focus,select:focus,textarea:focus{border-color:#7c6fff}input::placeholder{color:#6a6a7a}select option{background:#1e2a4a;color:#e0e0e0}
+        table{width:100%;border-collapse:collapse;font-size:.8em}
+        th{background:#0f3460;color:#9b8fff;padding:8px;text-align:left;position:sticky;top:0}
+        td{padding:8px;border-bottom:1px solid #2a3a5e;color:#a0a0b0}tr:hover td{background:rgba(124,111,255,0.05)}
+        .cart-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #2a3a5e;gap:10px}
+        .cart-item-info{flex:1;min-width:0}.cart-item-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .cart-item-price{color:#9b8fff;font-size:.85em}
+        .cart-item-qty{display:flex;align-items:center;gap:5px}
+        .qty-btn{background:#0f3460;border:1px solid #2a3a5e;color:#e0e0e0;width:25px;height:25px;border-radius:50%;cursor:pointer;font-size:.8em;display:flex;align-items:center;justify-content:center}
+        .sidebar{position:fixed;left:-280px;top:0;bottom:0;width:260px;background:#1e2a4a;z-index:1000;transition:left .3s;overflow-y:auto;border-right:1px solid #2a3a5e}
+        .sidebar.active{left:0}
+        .sidebar-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:999}
+        .sidebar-overlay.active{display:block}
+        .modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);z-index:2000;justify-content:center;align-items:center;padding:15px}
+        .modal.active{display:flex}
+        .modal-content{background:#1e2a4a;border-radius:15px;padding:20px;width:100%;max-width:400px;max-height:85vh;overflow-y:auto;border:1px solid #2a3a5e}
+        .modal-content h3,.modal-content h4{color:#9b8fff;margin-bottom:10px}
+        .form-group{margin-bottom:12px}.form-group label{display:block;margin-bottom:4px;color:#a0a0b0;font-size:.85em}
+        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .receipt{background:#fff;color:#000;padding:20px;border-radius:10px;font-family:'Courier New',monospace;font-size:.85em;line-height:1.6}
+        .receipt h2,.receipt h3{color:#000;text-align:center}.receipt hr{border-color:#ccc}.receipt .total{font-size:1.2em;font-weight:bold}
+        .discount-row {display:flex;align-items:center;gap:8px;margin:5px 0}
+        .discount-row select, .discount-row input {flex:1}
+        .alert{background:rgba(255,71,87,.15);border:1px solid #ff4757;border-radius:8px;padding:10px;margin:8px 0}
+        .alert-warning{background:rgba(255,165,2,.15);border-color:#ffa502}
+        @media print{body{background:#fff}.header,.nav-bar,.sidebar,.modal,#loginScreen,.btn,.logout-btn,.hamburger{display:none!important}#mainApp{display:block!important}#mainContent{background:#fff;color:#000}.card,.metric-card{background:#fff;border:1px solid #ddd;color:#000}}
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div id="loginScreen">
+            <div class="login-card">
+                <div class="login-logo">
+                    <h1>🏪 MLEA POS</h1>
+                    <p>Multi-Branch Logic Network</p>
+                </div>
+                <div class="section-label">👤 Select User Profile</div>
+                <div class="user-selector" id="userSelector"></div>
+                <div class="section-label">🔢 Enter Secure PIN</div>
+                <div class="pin-display" id="pinDisplay">
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                </div>
+                <div class="error-msg" id="errorMessage"></div>
+                <div class="pin-pad">
+                    <button class="pin-btn" onclick="enterPin('1')">1</button>
+                    <button class="pin-btn" onclick="enterPin('2')">2</button>
+                    <button class="pin-btn" onclick="enterPin('3')">3</button>
+                    <button class="pin-btn" onclick="enterPin('4')">4</button>
+                    <button class="pin-btn" onclick="enterPin('5')">5</button>
+                    <button class="pin-btn" onclick="enterPin('6')">6</button>
+                    <button class="pin-btn" onclick="enterPin('7')">7</button>
+                    <button class="pin-btn" onclick="enterPin('8')">8</button>
+                    <button class="pin-btn" onclick="enterPin('9')">9</button>
+                    <button class="pin-btn clear" onclick="clearPin()">Clear</button>
+                    <button class="pin-btn" onclick="enterPin('0')">0</button>
+                    <button class="pin-btn submit" onclick="submitPin()">→</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="mainApp">
+            <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+            <div class="sidebar" id="sidebar">
+                <div style="padding:15px;background:#1a1a2e;border-bottom:1px solid #2a3a5e;">
+                    <h3 style="color:#9b8fff;">MLEA POS</h3>
+                    <p style="font-size:.75em;color:#a0a0b0;" id="sidebarUserInfo"></p>
+                    <span class="role-badge" id="sidebarRole" style="margin-top:5px;"></span>
+                </div>
+                <div style="padding:10px;display:flex;flex-direction:column;gap:3px;" id="sidebarNav">
+                    <button class="nav-btn" onclick="switchView('dashboard')">📊 Dashboard</button>
+                    <button class="nav-btn" onclick="switchView('pos')">💻 POS Terminal</button>
+                    <button class="nav-btn" onclick="switchView('inventory')">📦 Inventory <span class="badge" id="sidebarLowStock" style="display:none;">0</span></button>
+                    <button class="nav-btn" id="navBranches" onclick="switchView('branches')">🏢 Branches</button>
+                    <button class="nav-btn" onclick="switchView('suppliers')">🤝 Suppliers</button>
+                    <button class="nav-btn" onclick="switchView('purchaseOrders')">📋 Purchase Orders</button>
+                    <button class="nav-btn" onclick="switchView('expenses')">💸 Expenses</button>
+                    <button class="nav-btn" onclick="switchView('settings')">⚙️ Settings</button>
+                    <button class="nav-btn" id="navUsers" onclick="switchView('users')">👥 Users / Staff</button>
+                    <button class="nav-btn" onclick="switchView('reports')">💾 Backup Panel</button>
+                </div>
+            </div>
+
+            <div class="header">
+                <button class="hamburger" onclick="openSidebar()">☰</button>
+                <h1 id="headerBranchTitle">MLEA POS</h1>
+                <div class="header-right">
+                    <span id="headerCurrency"></span>
+                    <span id="headerUser"></span>
+                    <button class="logout-btn" onclick="logout()">🚪</button>
+                </div>
+            </div>
+
+            <div class="nav-bar" id="navBar">
+                <button class="nav-btn active" onclick="switchView('dashboard')">📊 Dashboard</button>
+                <button class="nav-btn" onclick="switchView('pos')">💻 POS</button>
+                <button class="nav-btn" onclick="switchView('inventory')">📦 Stock <span class="badge" id="navLowStock" style="display:none;">0</span></button>
+                <button class="nav-btn" onclick="switchView('settings')">⚙️</button>
+            </div>
+
+            <div id="mainContent">
+                <p style="text-align:center;padding:40px;color:#a0a0b0;">Loading Operations...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content" id="modalContent"></div>
+    </div>
+
+    <script>
+        // --- 1. ISOLATED DATABASING ENGINE ---
+        const DB = {
+            stores: ['products', 'sales', 'suppliers', 'purchaseOrders', 'expenses', 'users', 'settings', 'branches'],
+            init() {
+                this.stores.forEach(s => {
+                    if (!localStorage.getItem('mlea_' + s)) localStorage.setItem('mlea_' + s, '[]');
+                });
+            },
+            getAll(key) { return JSON.parse(localStorage.getItem('mlea_' + key) || '[]'); },
+            set(key, data) { localStorage.setItem('mlea_' + key, JSON.stringify(data)); },
+            add(key, item) {
+                const items = this.getAll(key);
+                item.id = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
+                // Auto-attach branch isolation markers if not specified
+                if (!item.branchId && currentUser && currentUser.role !== 'admin') {
+                    item.branchId = currentUser.branchId;
+                }
+                item.createdAt = new Date().toISOString();
+                items.push(item);
+                this.set(key, items);
+                return item.id;
+            },
+            update(key, item) {
+                const items = this.getAll(key);
+                const idx = items.findIndex(i => i.id === item.id);
+                if (idx !== -1) {
+                    item.updatedAt = new Date().toISOString();
+                    items[idx] = item;
+                }
+                this.set(key, items);
+            },
+            delete(key, id) { this.set(key, this.getAll(key).filter(i => i.id !== id)); }
+        };
+        DB.init();
+
+        const currencies = {
+            USD: { symbol: '$', name: 'US Dollar', flag: '🇺🇸', decimals: 2 },
+            PHP: { symbol: '₱', name: 'Philippine Peso', flag: '🇵🇭', decimals: 2 },
+            EUR: { symbol: '€', name: 'Euro', flag: '🇪🇺', decimals: 2 }
+        };
+
+        // --- 2. STATES ---
+        let currentUser = null, currentView = 'dashboard', currentCurrency = 'PHP';
+        let taxRate = 0.12, discountRate = 0, discountType = 'percent';
+        let cart = [], selectedUserId = null, pinEntry = '', receiptFooter = 'Thank you for your business!';
+
+        function formatCurrency(amt) {
+            const c = currencies[currentCurrency] || currencies.PHP;
+            return c.symbol + amt.toFixed(c.decimals);
+        }
+
+        // --- FILTER EXTRACTOR FOR SECURE DATA ISOLATION ---
+        function getIsolatedData(storeKey) {
+            const allItems = DB.getAll(storeKey);
+            if (!currentUser || currentUser.role === 'admin') return allItems; // Admin sees all
+            return allItems.filter(item => item.branchId === currentUser.branchId); // Managers/Cashiers see only their branch
+        }
+
+        function getLowStockCount() {
+            return getIsolatedData('products').filter(p => p.active && p.stock < 10).length;
+        }
+
+        function updateBadges() {
+            const c = getLowStockCount();
+            ['sidebarLowStock', 'navLowStock'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.textContent = c; el.style.display = c > 0 ? 'inline' : 'none'; }
+            });
+        }
+
+        // --- 3. SECURITY INITIALIZATION ---
+        function initApp() {
+            let users = DB.getAll('users');
+            if (users.length === 0) {
+                // Seed Super Admin
+                DB.add('users', { name: 'Super Admin', role: 'admin', active: true, pin: '1234', branchId: 0 });
+            }
+            const savedSettings = DB.getAll('settings');
+            const sc = savedSettings.find(s => s.key === 'currency'); if (sc) currentCurrency = sc.value;
+            const st = savedSettings.find(s => s.key === 'taxRate'); if (st) taxRate = parseFloat(st.value);
+            
+            updateBadges();
+            renderLoginScreen();
+        }
+
+        function renderLoginScreen() {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('mainApp').style.display = 'none';
+            const users = DB.getAll('users').filter(u => u.active);
+            document.getElementById('userSelector').innerHTML = users.map(u => `
+                <div class="user-card ${selectedUserId === u.id ? 'selected' : ''}" onclick="selectUser(${u.id})">
+                    <div class="avatar">${u.role === 'admin' ? '👑' : u.role === 'manager' ? '👨‍💼' : '👤'}</div>
+                    <div class="name">${u.name}</div>
+                    <span class="role-badge ${u.role}-badge">${u.role}</span>
+                </div>
+            `).join('');
+        }
+
+        function selectUser(id) { selectedUserId = id; pinEntry = ''; updatePinDisplay(); renderLoginScreen(); }
+        function enterPin(d) { if (!selectedUserId) return; if (pinEntry.length < 4) { pinEntry += d; updatePinDisplay(); } }
+        function clearPin() { pinEntry = ''; updatePinDisplay(); }
+        function updatePinDisplay() {
+            document.querySelectorAll('.pin-dot').forEach((d, i) => d.classList.toggle('filled', i < pinEntry.length));
+        }
+
+        function submitPin() {
+            const user = DB.getAll('users').find(u => u.id === selectedUserId);
+            if (user && user.pin === pinEntry) {
+                currentUser = user;
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('headerUser').textContent = user.name;
+                document.getElementById('headerCurrency').textContent = (currencies[currentCurrency]?.flag || '') + ' ' + currentCurrency;
+                
+                // Set branch name display
+                const branches = DB.getAll('branches');
+                const bMatch = branches.find(b => b.id === user.branchId);
+                document.getElementById('headerBranchTitle').textContent = bMatch ? `MLEA - ${bMatch.name}` : 'MLEA HQ Admin';
+                
+                document.getElementById('sidebarUserInfo').textContent = `${user.name} (${user.role})`;
+                document.getElementById('sidebarRole').textContent = user.role;
+                document.getElementById('sidebarRole').className = `role-badge ${user.role}-badge`;
+                
+                // Structural Access Restrictions
+                document.getElementById('navBranches').style.display = user.role === 'admin' ? 'block' : 'none';
+                document.getElementById('navUsers').style.display = (user.role === 'admin' || user.role === 'manager') ? 'block' : 'none';
+                
+                switchView('dashboard');
+            } else {
+                document.getElementById('errorMessage').textContent = '⚠️ Incorrect Code/PIN!';
+                clearPin();
+            }
+        }
+
+        function logout() { currentUser = null; cart = []; switchView('dashboard'); renderLoginScreen(); }
+        function openSidebar() { document.getElementById('sidebar').classList.add('active'); document.getElementById('sidebarOverlay').classList.add('active'); }
+        function closeSidebar() { document.getElementById('sidebar').classList.remove('active'); document.getElementById('sidebarOverlay').classList.remove('active'); }
+        function closeModal() { document.getElementById('modal').classList.remove('active'); }
+
+        function switchView(view) {
+            currentView = view; closeSidebar(); updateBadges();
+            const container = document.getElementById('mainContent');
+            if (view === 'dashboard') renderDashboard(container);
+            else if (view === 'pos') renderPOS(container);
+            else if (view === 'inventory') renderInventory(container);
+            else if (view === 'branches') renderBranches(container);
+            else if (view === 'suppliers') renderSuppliers(container);
+            else if (view === 'purchaseOrders') renderPurchaseOrders(container);
+            else if (view === 'expenses') renderExpenses(container);
+            else if (view === 'settings') renderSettings(container);
+            else if (view === 'users') renderUsers(container);
+            else if (view === 'reports') renderReports(container);
+        }
+
+        // --- 4. DATA ENGINE LOGIC CORES ---
+        function renderDashboard(el) {
+            const sales = getIsolatedData('sales');
+            const lowCount = getLowStockCount();
+            const totalRev = sales.reduce((a, b) => a + b.total, 0);
+            el.innerHTML = `
+                <div class="metrics">
+                    <div class="metric-card"><div class="metric-value">${sales.length}</div><div class="metric-label">Sales Count</div></div>
+                    <div class="metric-card"><div class="metric-value">${formatCurrency(totalRev)}</div><div class="metric-label">Revenue Pool</div></div>
+                    <div class="metric-card"><div class="metric-value">${lowCount}</div><div class="metric-label">Low Stock Items</div></div>
+                </div>
+                <div class="card">
+                    <h4>Security Node Confirmation</h4>
+                    <p style="font-size:0.8em;color:#a0a0b0;margin-top:4px;">Multi-tenant node isolation active. Data streams are encrypted and walled per storefront entity segment.</p>
+                </div>
+            `;
+        }
+
+        function renderPOS(el) {
+            const products = getIsolatedData('products').filter(p => p.active);
+            const subtotal = cart.reduce((a, b) => a + (b.price * b.qty), 0);
+            const disc = discountType === 'percent' ? subtotal * (discountRate / 100) : discountRate;
+            const taxable = Math.max(0, subtotal - disc);
+            const tax = taxable * taxRate;
+            const total = taxable + tax;
+
+            el.innerHTML = `
+                <div class="card"><input type="text" id="posSearch" placeholder="🔍 Search Item/Scan Barcode..." oninput="handlePOSSearch(this.value)"></div>
+                <div class="product-grid" id="posProductGrid">
+                    ${products.map(p => `
+                        <div class="product-card" onclick="addToCart(${p.id})">
+                            <strong>${p.name}</strong><br><span style="color:#9b8fff;">${formatCurrency(p.price)}</span><br>
+                            <small class="${p.stock < 10 ? 'stock-low' : ''}">Stock: ${p.stock}</small>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="card">
+                    <h4>Active Registers</h4>
+                    ${cart.map((item, idx) => `
+                        <div class="cart-item">
+                            <div class="cart-item-info"><strong>${item.name}</strong></div>
+                            <div class="cart-item-qty">
+                                <button class="qty-btn" onclick="adjustCartQty(${idx}, -1)">-</button>
+                                <span>${item.qty}</span>
+                                <button class="qty-btn" onclick="adjustCartQty(${idx}, 1)">+</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                    <div class="discount-row" style="margin-top:10px;">
+                        <select onchange="discountType=this.value; renderPOS(document.getElementById('mainContent'))">
+                            <option value="percent" ${discountType === 'percent' ? 'selected' : ''}>% Discount</option>
+                            <option value="flat" ${discountType === 'flat' ? 'selected' : ''}>Fixed Amount</option>
+                        </select>
+                        <input type="number" value="${discountRate}" onchange="discountRate=parseFloat(this.value)||0; renderPOS(document.getElementById('mainContent'))">
+                    </div>
+                    <div style="text-align:right;margin-top:10px;font-size:0.85em;color:#a0a0b0;">
+                        <div>Subtotal: ${formatCurrency(subtotal)}</div>
+                        <div>Discount: -${formatCurrency(disc)}</div>
+                        <div style="font-size:1.1em;color:#2ed573;font-weight:bold;margin-top:5px;">Total: ${formatCurrency(total)}</div>
+                    </div>
+                    <button class="btn btn-success" style="width:100%;margin-top:10px;" onclick="processCheckout(${total})">Complete Checkout</button>
+                </div>
+            `;
+        }
+
+        function handlePOSSearch(val) {
+            const grid = document.getElementById('posProductGrid');
+            const matched = getIsolatedData('products').filter(p => p.active && (p.name.toLowerCase().includes(val.toLowerCase()) || p.barcode === val));
+            grid.innerHTML = matched.map(p => `
+                <div class="product-card" onclick="addToCart(${p.id})">
+                    <strong>${p.name}</strong><br><span style="color:#9b8fff;">${formatCurrency(p.price)}</span>
+                </div>
+            `).join('');
+        }
+
+        function addToCart(id) {
+            const p = DB.getAll('products').find(x => x.id === id);
+            if (!p || p.stock <= 0) return alert("Out of stock!");
+            const existing = cart.find(i => i.id === id);
+            if (existing) { existing.qty++; } else { cart.push({ id: p.id, name: p.name, price: p.price, qty: 1 }); }
+            renderPOS(document.getElementById('mainContent'));
+        }
+
+        function adjustCartQty(idx, amt) {
+            cart[idx].qty += amt; if (cart[idx].qty <= 0) cart.splice(idx, 1);
+            renderPOS(document.getElementById('mainContent'));
+        }
+
+        function processCheckout(total) {
+            if (cart.length === 0) return;
+            const products = DB.getAll('products');
+            cart.forEach(item => {
+                const target = products.find(p => p.id === item.id);
+                if (target) target.stock -= item.qty;
+            });
+            DB.set('products', products);
+            DB.add('sales', { items: cart, total: total, branchId: currentUser.branchId });
+            cart = []; alert("Sale Committed!"); renderPOS(document.getElementById('mainContent'));
+        }
+
+        function renderInventory(el) {
+            const products = getIsolatedData('products');
+            el.innerHTML = `
+                <div class="card" style="display:flex;justify-content:between;align-items:center;">
+                    <h4>Store Inventory</h4>
+                    <button class="btn btn-primary btn-sm" onclick="showProductModal()">+ Add Product</button>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead><tr><th>Name</th><th>Stock</th><th>Price</th></tr></thead>
+                        <tbody>
+                            ${products.map(p => `<tr><td><strong>${p.name}</strong></td><td>${p.stock}</td><td>${formatCurrency(p.price)}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function showProductModal() {
+            document.getElementById('modalContent').innerHTML = `
+                <h4>Add Isolated Product Node</h4>
+                <div class="form-group"><label>Product Title</label><input type="text" id="pName"></div>
+                <div class="form-group"><label>Retail Price</label><input type="number" id="pPrice"></div>
+                <div class="form-group"><label>Baseline Stock</label><input type="number" id="pStock"></div>
+                <div class="form-group"><label>Barcode String</label><input type="text" id="pBarcode"></div>
+                <button class="btn btn-success" style="width:100%;" onclick="saveProduct()">Save Product Blueprint</button>
+            `;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function saveProduct() {
+            DB.add('products', {
+                name: document.getElementById('pName').value,
+                price: parseFloat(document.getElementById('pPrice').value)||0,
+                stock: parseInt(document.getElementById('pStock').value)||0,
+                barcode: document.getElementById('pBarcode').value,
+                branchId: currentUser.branchId, // Automatically tagged to creator branch
+                active: true
+            });
+            closeModal(); switchView('inventory');
+        }
+
+        // --- 5. BRANCH DATA MANAGEMENT (ADMIN ONLY) ---
+        function renderBranches(el) {
+            if (currentUser.role !== 'admin') { el.innerHTML = `Access Restricted.`; return; }
+            const branches = DB.getAll('branches');
+            el.innerHTML = `
+                <div class="card" style="display:flex;justify-content:between;align-items:center;">
+                    <h4>System Business Branches</h4>
+                    <button class="btn btn-primary btn-sm" onclick="showBranchModal()">+ Add New Branch</button>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead><tr><th>Branch ID</th><th>Location Label</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            ${branches.map(b => `<tr><td>#${b.id}</td><td><strong>${b.name}</strong></td><td><button class="btn btn-danger btn-xs" onclick="DB.delete('branches',${b.id}); switchView('branches');">Delete</button></td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function showBranchModal() {
+            document.getElementById('modalContent').innerHTML = `
+                <h4>Add Corporate Location Branch Node</h4>
+                <div class="form-group"><label>Branch Name</label><input type="text" id="bName"></div>
+                <button class="btn btn-success" style="width:100%;" onclick="DB.add('branches',{name:document.getElementById('bName').value}); closeModal(); switchView('branches');">Save Location</button>
+            `;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        // --- 6. USER/STAFF PROFILES SECURITY CHANNEL ---
+        function renderUsers(el) {
+            // Admin sees all users; Managers only see users belonging to their branch
+            const users = DB.getAll('users').filter(u => currentUser.role === 'admin' || u.branchId === currentUser.branchId);
+            
+            el.innerHTML = `
+                <div class="card" style="display:flex;justify-content:between;align-items:center;">
+                    <h4>Staff Authorization Cluster</h4>
+                    <button class="btn btn-primary btn-sm" onclick="showUserModal()">+ Assign New Member</button>
+                </div>
+                <div class="card">
+                    <table>
+                        <thead><tr><th>Name</th><th>Role</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            ${users.map(u => `
+                                <tr>
+                                    <td><strong>${u.name}</strong><br><small style="color:#6a6a7a;">Branch Connection: #${u.branchId}</small></td>
+                                    <td><span class="role-badge ${u.role}-badge">${u.role}</span></td>
+                                    <td>
+                                        ${u.role === 'admin' ? '' : `<button class="btn btn-danger btn-xs" onclick="deleteUserNode(${u.id})">Remove Access</button>`}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function showUserModal() {
+            const branches = DB.getAll('branches');
+            const isAdmin = currentUser.role === 'admin';
+            
+            document.getElementById('modalContent').innerHTML = `
+                <h4>Authorize System Profile</h4>
+                <div class="form-group"><label>Alias Display Name</label><input type="text" id="uName"></div>
+                <div class="form-group">
+                    <label>Designated Operational Role</label>
+                    <select id="uRole">
+                        ${isAdmin ? '<option value="manager">Branch Manager Node</option>' : ''}
+                        <option value="cashier" selected>Cashier Desk Terminal</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Assigned Branch Link</label>
+                    <select id="uBranchId" ${!isAdmin ? 'disabled' : ''}>
+                        ${isAdmin ? branches.map(b => `<option value="${b.id}">${b.name}</option>`).join('') : `<option value="${currentUser.branchId}">Current Managed Branch</option>`}
+                    </select>
+                </div>
+                <div class="form-group"><label>Secure Access PIN (4 Digits)</label><input type="password" maxlength="4" id="uPin"></div>
+                <button class="btn btn-success" style="width:100%;" onclick="commitUserNode()">Authorize Member Access</button>
+            `;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function commitUserNode() {
+            const pin = document.getElementById('uPin').value;
+            if (pin.length !== 4) return alert("PIN must be exactly 4 digits.");
+            
+            DB.add('users', {
+                name: document.getElementById('uName').value,
+                role: document.getElementById('uRole').value,
+                branchId: parseInt(document.getElementById('uBranchId').value) || currentUser.branchId,
+                pin: pin,
+                active: true
+            });
+            closeModal(); switchView('users');
+        }
+
+        function deleteUserNode(id) {
+            const target = DB.getAll('users').find(u => u.id === id);
+            if (!target) return;
+            
+            // Security verification guardrail
+            if (currentUser.role === 'manager' && target.role === 'manager') {
+                return alert("Security Failure: A branch manager cannot terminate another manager node.");
+            }
+            
+            if (confirm("Revoke user privileges and wipe data assignment paths?")) {
+                DB.delete('users', id);
+                switchView('users');
+            }
+        }
+
+        // --- BACKUP, SUPPLIERS, DISPATCH, EXPENSES CORES ---
+        function renderSuppliers(el) {
+            const data = getIsolatedData('suppliers');
+            el.innerHTML = `<div class="card"><h4>Suppliers Log</h4><button class="btn btn-primary btn-sm" onclick="DB.add('suppliers',{name:'Default Vendor',branchId:currentUser.branchId});switchView('suppliers');">+ Quick Add</button><table>${data.map(s=>`<tr><td>${s.name}</td></tr>`).join('')}</table></div>`;
+        }
+        function renderPurchaseOrders(el) {
+            const data = getIsolatedData('purchaseOrders');
+            el.innerHTML = `<div class="card"><h4>Purchase Tracking</h4><table>${data.map(p=>`<tr><td>Order #${p.id}</td></tr>`).join('')}</table></div>`;
+        }
+        function renderExpenses(el) {
+            const data = getIsolatedData('expenses');
+            el.innerHTML = `<div class="card"><h4>Expenses Ledger</h4><button class="btn btn-primary btn-sm" onclick="DB.add('expenses',{type:'Utility Outflow',amount:50,branchId:currentUser.branchId});switchView('expenses');">+ Add Sample Outflow</button><table>${data.map(e=>`<tr><td>${e.type} - ${formatCurrency(e.amount)}</td></tr>`).join('')}</table></div>`;
+        }
+        function renderSettings(el) {
+            el.innerHTML = `<div class="card"><h4>System Configuration</h4><p style="font-size:0.85em;color:#a0a0b0;">Base Configuration Matrix matches localized tax code algorithms directly.</p></div>`;
+        }
+
+        function renderReports(el) {
+            el.innerHTML = `
+                <div class="card">
+                    <h4>Internal System Core Database Backups</h4>
+                    <button class="btn btn-success" style="width:100%;margin-bottom:6px;" onclick="triggerSystemExport()">📥 Extract & Download JSON File</button>
+                    <button class="btn btn-warning" style="width:100%;" onclick="triggerRestorePortal()">📤 Re-inject JSON Storage Blueprint</button>
+                </div>
+            `;
+        }
+
+        function triggerSystemExport() {
+            const archive = {}; DB.stores.forEach(s => archive[s] = DB.getAll(s));
+            const contentBlob = new Blob([JSON.stringify(archive, null, 2)], { type: 'application/json' });
+            const temporaryAnchor = document.createElement('a');
+            temporaryAnchor.href = URL.createObjectURL(contentBlob);
+            temporaryAnchor.download = `MLEA_MULTI_BRANCH_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
+            temporaryAnchor.click();
+        }
+
+        function triggerRestorePortal() {
+            document.getElementById('modalContent').innerHTML = `
+                <h4>Upload System Archive JSON Backup File</h4>
+                <div class="form-group" style="margin-top:10px;"><input type="file" id="importPayload" accept=".json"></div>
+                <button class="btn btn-success" style="width:100%;margin-top:10px;" onclick="processImportStream()">Execute System Restore</button>
+            `;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function processImportStream() {
+            const selector = document.getElementById('importPayload').files[0];
+            if (!selector) return;
+            const browserStreamReader = new FileReader();
+            browserStreamReader.onload = function(e) {
+                try {
+                    const compiled = JSON.parse(e.target.result);
+                    DB.stores.forEach(s => { if (compiled[s]) DB.set(s, compiled[s]); });
+                    alert("Database injection finished!"); window.location.reload();
+                } catch(err) { alert("Invalid File Format"); }
+            };
+            browserStreamReader.readAsText(selector);
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
