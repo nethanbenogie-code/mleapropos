@@ -951,77 +951,69 @@
 
     // Handle activation button click
         // Handle activation button click
-        async function handleActivation() {
-      const input = document.getElementById('licenseInput');
-      const statusEl = document.getElementById('activationStatus');
-      const btn = document.getElementById('activateBtn');
-      const key = input.value.trim();
+     async function handleActivation() {
+  const input = document.getElementById('licenseInput');
+  const statusEl = document.getElementById('activationStatus');
+  const btn = document.getElementById('activateBtn');
+  const key = input.value.trim();
 
-      if (!key) {
-        statusEl.textContent = '⚠️ Please enter your license key';
-        statusEl.className = 'activation-status error';
-        return;
-      }
+  if (!key) {
+    statusEl.textContent = '⚠️ Please enter your license key';
+    statusEl.className = 'activation-status error';
+    return;
+  }
 
-      btn.disabled = true;
-      statusEl.textContent = '⏳ Connecting to license server...';
-      statusEl.className = 'activation-status loading';
+  btn.disabled = true;
+  statusEl.textContent = '⏳ Connecting to license server...';
+  statusEl.className = 'activation-status loading';
 
-      const deviceId = getDeviceId();
+  const deviceId = getDeviceId();
 
-      try {
-        const response = await fetch(LICENSE_SERVER, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'activate',
-            licenseKey: key,
-            deviceId: deviceId
-          })
-        });
-
-        const result = await response.json();
-        
-        if (result.success) {
-          setActivated(key);
-          statusEl.textContent = '✅ ' + result.message + ' Welcome, ' + (result.customer || 'User') + '!';
-          statusEl.className = 'activation-status success';
-          showToast('🎉 License activated! All features unlocked.');
-        } else {
-          statusEl.textContent = '❌ ' + result.message;
-          statusEl.className = 'activation-status error';
-        }
-      } catch (error) {
-        // Fallback: try GET request
-        try {
-          const getUrl = LICENSE_SERVER + '?action=activate&licenseKey=' + encodeURIComponent(key) + '&deviceId=' + encodeURIComponent(deviceId);
-          const getResponse = await fetch(getUrl);
-          const result = await getResponse.json();
-          
-          if (result.success) {
-            setActivated(key);
-            statusEl.textContent = '✅ ' + result.message + ' Welcome, ' + (result.customer || 'User') + '!';
-            statusEl.className = 'activation-status success';
-            showToast('🎉 License activated!');
-          } else {
-            statusEl.textContent = '❌ ' + result.message;
-            statusEl.className = 'activation-status error';
-          }
-        } catch (getError) {
-          if (key === DEMO_KEY) {
-            setActivated(key);
-            statusEl.textContent = '⚠️ Offline mode — demo activated';
-            statusEl.className = 'activation-status success';
-            showToast('📡 Offline mode');
-          } else {
-            statusEl.textContent = '❌ Cannot reach server. Check your internet.';
-            statusEl.className = 'activation-status error';
-          }
-        }
-      }
-
+  // Use GET method (more reliable than POST for Apps Script)
+  const url = LICENSE_SERVER + '?action=activate&licenseKey=' + encodeURIComponent(key) + '&deviceId=' + encodeURIComponent(deviceId);
+  
+  try {
+    const response = await fetch(url);
+    const text = await response.text();
+    
+    console.log('Server response:', text);
+    
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch (e) {
+      statusEl.textContent = '❌ Invalid server response: ' + text;
+      statusEl.className = 'activation-status error';
       btn.disabled = false;
+      return;
     }
+
+    if (result.success) {
+      setActivated(key);
+      statusEl.textContent = '✅ ' + result.message;
+      statusEl.className = 'activation-status success';
+      showToast('🎉 License activated! All features unlocked.');
+    } else {
+      statusEl.textContent = '❌ ' + result.message;
+      statusEl.className = 'activation-status error';
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    
+    // Offline fallback for demo key
+    if (key === DEMO_KEY) {
+      setActivated(key);
+      statusEl.textContent = '⚠️ Offline mode — demo activated';
+      statusEl.className = 'activation-status success';
+      showToast('📡 Offline mode');
+    } else {
+      statusEl.textContent = '❌ Cannot reach server. Check your internet connection.';
+      statusEl.className = 'activation-status error';
+    }
+  }
+
+  btn.disabled = false;
+}
 
     function handleActivationResult(result, key) {
       const statusEl = document.getElementById('activationStatus');
