@@ -1029,16 +1029,83 @@
       input.value = parts.join('-');
     }
 
-    function activateLicense() {
-      const input = document.getElementById('licenseInput');
-      const statusEl = document.getElementById('activationStatus');
-      const key = input.value.trim();
+    // Your live license server URL
+const LICENSE_SERVER = 'https://script.google.com/macros/s/AKfycbyWxI4a1HDlc8N-sQnLKpOtbImJ3AoUN2O6Yw0f8Bd5p961BbB3qOFtjKU5LkHt7DtB/exec';
 
-      if (!key) {
-        statusEl.textContent = '⚠️ Please enter your license key';
-        statusEl.className = 'activation-status error';
-        return;
-      }
+// Create a unique ID for each device
+function getDeviceId() {
+  let id = '';
+  id += navigator.userAgent.replace(/\s/g, '').slice(-15);
+  id += screen.width + 'x' + screen.height;
+  id += new Date().getTimezoneOffset();
+  return btoa(id).replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
+}
+
+// New activation function - calls your Google Sheet
+async function activateLicense() {
+  const input = document.getElementById('licenseInput');
+  const statusEl = document.getElementById('activationStatus');
+  const key = input.value.trim();
+
+  if (!key) {
+    statusEl.textContent = '⚠️ Please enter your license key';
+    statusEl.className = 'activation-status error';
+    return;
+  }
+
+  statusEl.textContent = '⏳ Verifying with server...';
+  statusEl.className = 'activation-status';
+  
+  const deviceId = getDeviceId();
+  
+  try {
+    const response = await fetch(LICENSE_SERVER, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'activate',
+        licenseKey: key,
+        deviceId: deviceId
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      // Save to localStorage
+      localStorage.setItem('mlea_pos_activated', 'true');
+      localStorage.setItem('mlea_pos_license', key);
+      updateUIForActivation();
+      
+      statusEl.textContent = '✅ License activated! Welcome, ' + (result.customer || 'User');
+      statusEl.className = 'activation-status success';
+      showToast('🎉 All features unlocked!');
+    } else {
+      statusEl.textContent = '❌ ' + result.message;
+      statusEl.className = 'activation-status error';
+    }
+  } catch (error) {
+    // Offline fallback for demo key only
+    if (key === 'MLEA-DEMO-UNLOCK-KEY1') {
+      localStorage.setItem('mlea_pos_activated', 'true');
+      localStorage.setItem('mlea_pos_license', key);
+      updateUIForActivation();
+      statusEl.textContent = '⚠️ Offline mode — demo activated';
+      statusEl.className = 'activation-status success';
+      showToast('📡 Activated offline');
+    } else {
+      statusEl.textContent = '❌ Cannot reach server. Check your internet.';
+      statusEl.className = 'activation-status error';
+    }
+  }
+}
+
+function showToast(message) {
+  const t = document.getElementById('toast');
+  t.textContent = message;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
 
       // For demo: also accept a master key
       const MASTER_KEY = 'MLEA-DEMO-UNLOCK-KEY1';
