@@ -268,7 +268,32 @@ function deleteBranch(id){const bUsers=DB.getByBranch('users',id);if(bUsers.leng
 
 // ==================== INVENTORY ====================
 function renderInventory(el){const myProducts=getMyData('products');el.innerHTML=`<h4>📦 My Products</h4><button class="btn btn-primary btn-block" onclick="showAddProduct()">+ Add Product</button><div style="overflow-x:auto;"><table><thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Act</th></tr></thead><tbody>${myProducts.map(p=>`<tr><td>${p.name}</td><td>${formatCurrency(p.price)}</td><td class="${p.stock<10?'stock-low':''}">${p.stock}</td><td><button class="btn btn-success btn-xs" onclick="adjustStock(${p.id})">+</button></td></tr>`).join('')}</tbody></table></div>${myProducts.length===0?'<p class="empty-state">No products yet</p>':''}`}
-function renderAllProducts(el){const all=DB.getAll('products');el.innerHTML=`<h4>📦 All Products</h4><table><thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Branch</th></tr></thead><tbody>${all.map(p=>{const b=p.branchId?DB.getById('branches',p.branchId):null;return`<tr><td>${p.name}</td><td>${formatCurrency(p.price)}</td><td>${p.stock}</td><td>${b?.name||'Global'}</td></tr>`}).join('')}</tbody></table>`}
+function function renderAllProducts(el){
+    const all=DB.getAll('products');
+    el.innerHTML=`
+        <h4>📦 All Products</h4>
+        <button class="btn btn-primary btn-block" onclick="showAddProduct()">+ Add Product</button>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Branch</th><th>Actions</th></tr></thead>
+                <tbody>${all.map(p=>{
+                    const b=p.branchId?DB.getById('branches',p.branchId):null;
+                    return`<tr>
+                        <td>${p.name}</td>
+                        <td>${formatCurrency(p.price)}</td>
+                        <td class="${p.stock<10?'stock-low':''}">${p.stock}</td>
+                        <td>${b?.name||'Global'}</td>
+                        <td style="white-space:nowrap;">
+                            <button class="btn btn-success btn-xs" onclick="adjustStock(${p.id})">+</button>
+                            <button class="btn btn-warning btn-xs" onclick="editProduct(${p.id})">✎</button>
+                            <button class="btn btn-danger btn-xs" onclick="deleteProduct(${p.id})">🗑️</button>
+                        </td>
+                    </tr>`;
+                }).join('')}</tbody>
+            </table>
+        </div>
+        ${all.length===0?'<p class="empty-state">No products yet</p>':''}`;
+}
 function showAddProduct(){document.getElementById('modalContent').innerHTML=`<h4>Add Product</h4><input type="text" id="pName" placeholder="Name *"><input type="number" id="pPrice" placeholder="Price *" step="0.01"><input type="number" id="pStock" placeholder="Stock" value="0"><input type="text" id="pSku" placeholder="SKU (auto if empty)"><button class="btn btn-primary" onclick="addProduct()">💾 Save</button><button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;document.getElementById('modal').classList.add('active')}
 function addProduct(){const name=document.getElementById('pName').value;const price=parseFloat(document.getElementById('pPrice').value);if(!name||!price){alert('Name and price required!');return}DB.add('products',{sku:document.getElementById('pSku').value||('SKU'+Date.now()),name,price,stock:parseInt(document.getElementById('pStock').value)||0,category:'General',active:true,barcode:'',branchId:currentUser.branchId});logActivity('Added Product',`${name} at ${formatCurrency(price)}`);closeModal();switchView('inventory')}
 function adjustStock(id){const p=DB.getById('products',id);document.getElementById('modalContent').innerHTML=`<h4>Adjust Stock: ${p.name}</h4><p style="color:#a0a0b0;">Current: ${p.stock}</p><input type="number" id="newStock" value="${p.stock}"><select id="adjReason"><option>Restock</option><option>Damage</option><option>Correction</option></select><button class="btn btn-primary" onclick="saveAdjust(${id})">💾 Save</button><button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;document.getElementById('modal').classList.add('active')}
