@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MLEA POS - Multi-Branch</title>
+    <title>MLEA POS - Multi-Branch System</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1a1a2e">
@@ -67,10 +67,9 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- LOGIN SCREEN -->
         <div id="loginScreen">
             <div class="login-card">
-                <div class="login-logo"><h1>🏪 MLEA POS</h1><p>Multi-Branch System</p></div>
+                <div class="login-logo"><h1>🏪 MLEA POS</h1><p>Multi-Branch System v2.0</p></div>
                 <div class="section-label">👤 Select User</div>
                 <div class="user-selector" id="userSelector"></div>
                 <div class="section-label">🔢 Enter PIN</div>
@@ -85,7 +84,6 @@
             </div>
         </div>
 
-        <!-- MAIN APP -->
         <div id="mainApp">
             <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
             <div class="sidebar" id="sidebar">
@@ -111,1059 +109,754 @@
     </div>
     <div class="modal" id="modal"><div class="modal-content" id="modalContent"></div></div>
 
-    <script>
-    // ==================== DATABASE ====================
-    const DB = {
-        stores: ['products','sales','suppliers','expenses','users','settings','inventoryLogs','branches','activityLogs'],
-        init() {
-            this.stores.forEach(s => {
-                if (!localStorage.getItem('mlea_' + s)) localStorage.setItem('mlea_' + s, '[]');
-            });
-        },
-        getAll(key) { return JSON.parse(localStorage.getItem('mlea_' + key) || '[]'); },
-        set(key, data) { localStorage.setItem('mlea_' + key, JSON.stringify(data)); },
-        add(key, item) {
-            const items = this.getAll(key);
-            item.id = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
-            item.createdAt = new Date().toISOString();
-            items.push(item);
-            this.set(key, items);
-            return item.id;
-        },
-        update(key, item) {
-            const items = this.getAll(key);
-            const idx = items.findIndex(i => i.id === item.id);
-            if (idx !== -1) { item.updatedAt = new Date().toISOString(); items[idx] = item; }
-            this.set(key, items);
-        },
-        delete(key, id) { this.set(key, this.getAll(key).filter(i => i.id !== id)); },
-        getById(key, id) { return this.getAll(key).find(i => i.id === id); },
-        getByBranch(key, branchId) { return this.getAll(key).filter(i => i.branchId === branchId); }
-    };
-    DB.init();
-
-    // ==================== CURRENCIES ====================
-    const currencies = {
-        USD: { symbol: '$', name: 'US Dollar', flag: '🇺🇸', decimals: 2 },
-        PHP: { symbol: '₱', name: 'Philippine Peso', flag: '🇵🇭', decimals: 2 },
-        EUR: { symbol: '€', name: 'Euro', flag: '🇪🇺', decimals: 2 },
-        GBP: { symbol: '£', name: 'British Pound', flag: '🇬🇧', decimals: 2 },
-        JPY: { symbol: '¥', name: 'Japanese Yen', flag: '🇯🇵', decimals: 0 },
-        INR: { symbol: '₹', name: 'Indian Rupee', flag: '🇮🇳', decimals: 2 },
-        CNY: { symbol: '¥', name: 'Chinese Yuan', flag: '🇨🇳', decimals: 2 },
-        AUD: { symbol: 'A$', name: 'Australian Dollar', flag: '🇦🇺', decimals: 2 },
-        SGD: { symbol: 'S$', name: 'Singapore Dollar', flag: '🇸🇬', decimals: 2 },
-        MYR: { symbol: 'RM', name: 'Malaysian Ringgit', flag: '🇲🇾', decimals: 2 },
-        AED: { symbol: 'د.إ', name: 'UAE Dirham', flag: '🇦🇪', decimals: 2 }
-    };
-
-    // ==================== STATE ====================
-    let currentUser = null, currentView = 'dashboard', currentCurrency = 'PHP';
-    let taxRate = 0.12, taxType = 'standard', taxName = 'VAT';
-    let discountRate = 0, discountType = 'percent', maxDiscount = 20, requireApproval = 10;
-    let cart = [], selectedUserId = null, pinEntry = '', users = [], branches = [];
-    let receiptFooter = 'Thank you for your business!', businessName = 'MLEA POS', businessAddress = '';
-
-    function formatCurrency(a) {
-        const c = currencies[currentCurrency];
-        return c.decimals === 0 ? c.symbol + ' ' + Math.round(a).toLocaleString() : c.symbol + a.toFixed(2);
-    }
-
-    function getMyData(key) {
-        const all = DB.getAll(key);
-        if (currentUser && currentUser.role === 'admin') return all;
-        if (currentUser && currentUser.branchId) return all.filter(i => i.branchId === currentUser.branchId);
-        return all.filter(i => !i.branchId);
-    }
-
-    function logActivity(action, details) {
-        if (!currentUser) return;
-        DB.add('activityLogs', {
-            userId: currentUser.id, userName: currentUser.name,
-            userRole: currentUser.role, branchId: currentUser.branchId,
-            action: action, details: details, timestamp: new Date().toISOString()
+<script>
+// ==================== DATABASE ====================
+const DB = {
+    stores: ['products','sales','suppliers','expenses','users','settings','inventoryLogs','branches','activityLogs'],
+    init() {
+        this.stores.forEach(s => {
+            if (!localStorage.getItem('mlea_' + s)) localStorage.setItem('mlea_' + s, '[]');
         });
-    }
+        console.log('DB initialized');
+    },
+    getAll(key) { return JSON.parse(localStorage.getItem('mlea_' + key) || '[]'); },
+    set(key, data) { localStorage.setItem('mlea_' + key, JSON.stringify(data)); },
+    add(key, item) {
+        const items = this.getAll(key);
+        item.id = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
+        item.createdAt = new Date().toISOString();
+        items.push(item);
+        this.set(key, items);
+        return item.id;
+    },
+    update(key, item) {
+        const items = this.getAll(key);
+        const idx = items.findIndex(i => i.id === item.id);
+        if (idx !== -1) { item.updatedAt = new Date().toISOString(); items[idx] = item; }
+        this.set(key, items);
+    },
+    delete(key, id) { this.set(key, this.getAll(key).filter(i => i.id !== id)); },
+    getById(key, id) { return this.getAll(key).find(i => i.id === id); },
+    getByBranch(key, branchId) { return this.getAll(key).filter(i => i.branchId === branchId); }
+};
+DB.init();
 
-    function saveSetting(key, value) {
-        const all = DB.getAll('settings');
-        const existing = all.find(s => s.key === key);
-        if (existing) { existing.value = value; DB.update('settings', existing); }
-        else { DB.add('settings', { key, value }); }
-    }
+// ==================== CURRENCIES ====================
+const currencies = {
+    USD:{symbol:'$',name:'US Dollar',flag:'🇺🇸',decimals:2},
+    PHP:{symbol:'₱',name:'Philippine Peso',flag:'🇵🇭',decimals:2},
+    EUR:{symbol:'€',name:'Euro',flag:'🇪🇺',decimals:2},
+    GBP:{symbol:'£',name:'British Pound',flag:'🇬🇧',decimals:2},
+    JPY:{symbol:'¥',name:'Japanese Yen',flag:'🇯🇵',decimals:0},
+    INR:{symbol:'₹',name:'Indian Rupee',flag:'🇮🇳',decimals:2},
+    CNY:{symbol:'¥',name:'Chinese Yuan',flag:'🇨🇳',decimals:2},
+    AUD:{symbol:'A$',name:'Australian Dollar',flag:'🇦🇺',decimals:2},
+    SGD:{symbol:'S$',name:'Singapore Dollar',flag:'🇸🇬',decimals:2},
+    MYR:{symbol:'RM',name:'Malaysian Ringgit',flag:'🇲🇾',decimals:2},
+    AED:{symbol:'د.إ',name:'UAE Dirham',flag:'🇦🇪',decimals:2}
+};
 
-    function loadSettings() {
-        DB.getAll('settings').forEach(s => {
-            if (s.key === 'currency') currentCurrency = s.value;
-            if (s.key === 'taxRate') taxRate = parseFloat(s.value);
-            if (s.key === 'taxName') taxName = s.value;
-            if (s.key === 'receiptFooter') receiptFooter = s.value;
-            if (s.key === 'businessName') businessName = s.value;
-            if (s.key === 'businessAddress') businessAddress = s.value;
-        });
-    }
+// ==================== STATE ====================
+let currentUser = null, currentView = 'dashboard', currentCurrency = 'PHP';
+let taxRate = 0.12, taxName = 'VAT';
+let discountRate = 0, discountType = 'percent';
+let cart = [], selectedUserId = null, pinEntry = '', users = [], branches = [];
+let receiptFooter = 'Thank you for your business!', businessName = 'MLEA POS', businessAddress = '';
 
-    // ==================== INIT ====================
-    function initApp() {
-        console.log('Initializing MLEA POS...');
-        users = DB.getAll('users');
+function formatCurrency(a) {
+    const c = currencies[currentCurrency];
+    return c.decimals === 0 ? c.symbol + ' ' + Math.round(a).toLocaleString() : c.symbol + a.toFixed(2);
+}
+
+function getMyData(key) {
+    const all = DB.getAll(key);
+    if (currentUser && currentUser.role === 'admin') return all;
+    if (currentUser && currentUser.branchId) return all.filter(i => i.branchId === currentUser.branchId);
+    return all.filter(i => !i.branchId);
+}
+
+function logActivity(action, details) {
+    if (!currentUser) return;
+    DB.add('activityLogs', {
+        userId: currentUser.id, userName: currentUser.name,
+        userRole: currentUser.role, branchId: currentUser.branchId,
+        action: action, details: details, timestamp: new Date().toISOString()
+    });
+}
+
+function saveSetting(key, value) {
+    const all = DB.getAll('settings');
+    const existing = all.find(s => s.key === key);
+    if (existing) { existing.value = value; DB.update('settings', existing); }
+    else { DB.add('settings', { key, value }); }
+}
+
+function loadSettings() {
+    DB.getAll('settings').forEach(s => {
+        if (s.key === 'currency') currentCurrency = s.value;
+        if (s.key === 'taxRate') taxRate = parseFloat(s.value);
+        if (s.key === 'taxName') taxName = s.value;
+        if (s.key === 'receiptFooter') receiptFooter = s.value;
+        if (s.key === 'businessName') businessName = s.value;
+        if (s.key === 'businessAddress') businessAddress = s.value;
+    });
+}
+
+// ==================== INIT ====================
+function initApp() {
+    console.log('🚀 Initializing MLEA POS...');
+    users = DB.getAll('users');
+    branches = DB.getAll('branches');
+
+    if (branches.length === 0) {
+        console.log('Creating default branch...');
+        DB.add('branches', { name: 'Main Branch', address: 'Head Office', phone: '555-0000' });
         branches = DB.getAll('branches');
-
-        if (branches.length === 0) {
-            DB.add('branches', { name: 'Main Branch', address: 'Head Office', phone: '555-0000' });
-            branches = DB.getAll('branches');
-        }
-        if (users.length === 0) {
-            DB.add('users', { name: 'Admin', role: 'admin', active: true, pin: '1234', branchId: null });
-            users = DB.getAll('users');
-        }
-        if (DB.getAll('products').length === 0) {
-            DB.add('products', { sku: 'SKU001', name: 'Sample Product', price: 99.99, stock: 50, category: 'General', active: true, barcode: '123456789', branchId: null });
-        }
-
-        loadSettings();
-        console.log('Users:', users.length, 'Branches:', branches.length);
-        renderLoginScreen();
     }
 
-    // ==================== LOGIN ====================
-    function renderLoginScreen() {
-        document.getElementById('loginScreen').style.display = 'flex';
-        document.getElementById('mainApp').style.display = 'none';
+    if (users.length === 0) {
+        console.log('Creating default admin user...');
+        DB.add('users', { name: 'Admin', role: 'admin', active: true, pin: '1234', branchId: null });
         users = DB.getAll('users');
-        const activeUsers = users.filter(u => u.active);
-        document.getElementById('userSelector').innerHTML = activeUsers.map(u => `
-            <div class="user-card ${selectedUserId === u.id ? 'selected' : ''}" onclick="selectUser(${u.id})">
-                <div class="avatar">${u.role === 'admin' ? '👑' : u.role === 'manager' ? '👨‍💼' : '👤'}</div>
-                <div class="name">${u.name}</div>
-                <span class="role-badge ${u.role}-badge">${u.role}</span>
-            </div>
-        `).join('');
     }
 
-    function selectUser(id) { selectedUserId = id; pinEntry = ''; updatePinDisplay(); document.getElementById('errorMessage').textContent = ''; renderLoginScreen(); }
-    function enterPin(d) { if (!selectedUserId) { document.getElementById('errorMessage').textContent = 'Select user first'; return; } if (pinEntry.length < 4) { pinEntry += d; updatePinDisplay(); } }
-    function clearPin() { pinEntry = ''; updatePinDisplay(); }
-    function updatePinDisplay() { document.querySelectorAll('.pin-dot').forEach((d, i) => { d.classList.toggle('filled', i < pinEntry.length); d.classList.remove('error'); }); }
+    if (DB.getAll('products').length === 0) {
+        console.log('Creating sample product...');
+        DB.add('products', { sku: 'SKU001', name: 'Sample Product', price: 99.99, stock: 50, category: 'General', active: true, barcode: '123456789', branchId: null });
+    }
 
-    function submitPin() {
-        if (!selectedUserId) return;
-        const user = users.find(u => u.id === selectedUserId);
-        if (user && user.pin === pinEntry) {
-            currentUser = user;
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'block';
-            document.getElementById('headerUser').textContent = user.name;
-            document.getElementById('sidebarUserInfo').textContent = user.name + ' (' + user.role + ')';
-            document.getElementById('sidebarRole').textContent = user.role;
-            document.getElementById('sidebarRole').className = 'role-badge ' + user.role + '-badge';
+    loadSettings();
+    console.log('✅ Users:', users.length, '| Branches:', branches.length);
+    console.log('👤 Default login: Admin / 1234');
+    renderLoginScreen();
+}
 
-            if (user.branchId) {
-                const branch = DB.getById('branches', user.branchId);
-                document.getElementById('headerBranch').innerHTML = `<span class="branch-indicator">🏢 ${branch?.name || 'Branch'}</span>`;
-                document.getElementById('headerTitle').textContent = (branch?.name || 'Branch') + ' POS';
-                document.getElementById('sidebarBranch').textContent = branch?.name || '';
-                document.getElementById('sidebarBranch').style.display = 'inline';
-            } else {
-                document.getElementById('headerBranch').innerHTML = '<span class="admin-indicator">👑 Admin</span>';
-                document.getElementById('headerTitle').textContent = 'MLEA HQ Admin';
-                document.getElementById('sidebarBranch').style.display = 'none';
-            }
-            document.getElementById('headerCurrency').textContent = currencies[currentCurrency].flag + ' ' + currentCurrency;
-            renderSidebar();
-            pinEntry = ''; selectedUserId = null; updatePinDisplay();
-            switchView('dashboard');
-            console.log('Logged in as:', user.name, user.role);
+// ==================== LOGIN ====================
+function renderLoginScreen() {
+    console.log('🖼️ Rendering login screen...');
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+    users = DB.getAll('users');
+    
+    const activeUsers = users.filter(u => u.active);
+    console.log('Active users:', activeUsers.length);
+    
+    document.getElementById('userSelector').innerHTML = activeUsers.map(u => `
+        <div class="user-card ${selectedUserId === u.id ? 'selected' : ''}" onclick="selectUser(${u.id})">
+            <div class="avatar">${u.role === 'admin' ? '👑' : u.role === 'manager' ? '👨‍💼' : '👤'}</div>
+            <div class="name">${u.name}</div>
+            <span class="role-badge ${u.role}-badge">${u.role}</span>
+            ${u.branchId ? '<div style="font-size:.55em;color:#9b8fff;">' + (DB.getById('branches', u.branchId)?.name || '') + '</div>' : ''}
+        </div>
+    `).join('');
+    
+    pinEntry = '';
+    updatePinDisplay();
+    document.getElementById('errorMessage').textContent = '';
+    console.log('✅ Login screen ready');
+}
+
+function selectUser(id) {
+    console.log('👆 Selected user ID:', id);
+    selectedUserId = id;
+    pinEntry = '';
+    updatePinDisplay();
+    document.getElementById('errorMessage').textContent = '';
+    renderLoginScreen();
+}
+
+function enterPin(d) {
+    if (!selectedUserId) {
+        document.getElementById('errorMessage').textContent = 'Select a user first';
+        return;
+    }
+    if (pinEntry.length < 4) {
+        pinEntry += d;
+        updatePinDisplay();
+        document.getElementById('errorMessage').textContent = '';
+        // Auto-submit when 4 digits
+        if (pinEntry.length === 4) {
+            setTimeout(() => submitPin(), 150);
+        }
+    }
+}
+
+function clearPin() {
+    pinEntry = '';
+    updatePinDisplay();
+    document.getElementById('errorMessage').textContent = '';
+}
+
+function updatePinDisplay() {
+    document.querySelectorAll('.pin-dot').forEach((d, i) => {
+        d.classList.toggle('filled', i < pinEntry.length);
+        d.classList.remove('error');
+    });
+}
+
+function submitPin() {
+    console.log('🔐 Submit PIN - UserID:', selectedUserId, 'PIN:', pinEntry);
+    
+    if (!selectedUserId) {
+        document.getElementById('errorMessage').textContent = 'Select a user first';
+        return;
+    }
+    
+    users = DB.getAll('users');
+    const user = users.find(u => u.id === selectedUserId);
+    console.log('Found user:', user ? user.name : 'NOT FOUND');
+    
+    if (!user) {
+        document.getElementById('errorMessage').textContent = 'User not found!';
+        pinEntry = ''; updatePinDisplay();
+        return;
+    }
+    
+    if (!user.active) {
+        document.getElementById('errorMessage').textContent = 'Account deactivated!';
+        pinEntry = ''; updatePinDisplay();
+        return;
+    }
+    
+    if (user.pin === pinEntry) {
+        console.log('✅ PIN correct! Logging in as:', user.name, user.role);
+        currentUser = user;
+        
+        // Switch screens
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        
+        // Update header
+        document.getElementById('headerUser').textContent = user.name;
+        document.getElementById('sidebarUserInfo').textContent = user.name + ' (' + user.role + ')';
+        document.getElementById('sidebarRole').textContent = user.role;
+        document.getElementById('sidebarRole').className = 'role-badge ' + user.role + '-badge';
+        document.getElementById('headerCurrency').textContent = currencies[currentCurrency].flag + ' ' + currentCurrency;
+        
+        // Branch info
+        if (user.branchId) {
+            const branch = DB.getById('branches', user.branchId);
+            document.getElementById('headerBranch').innerHTML = '<span class="branch-indicator">🏢 ' + (branch ? branch.name : 'Branch') + '</span>';
+            document.getElementById('headerTitle').textContent = (branch ? branch.name : 'Branch') + ' POS';
+            document.getElementById('sidebarBranch').textContent = branch ? branch.name : '';
+            document.getElementById('sidebarBranch').style.display = 'inline';
         } else {
-            document.getElementById('errorMessage').textContent = 'Wrong PIN!';
-            pinEntry = ''; updatePinDisplay();
-            document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
-            setTimeout(() => document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error')), 400);
+            document.getElementById('headerBranch').innerHTML = '<span class="admin-indicator">👑 Admin</span>';
+            document.getElementById('headerTitle').textContent = 'MLEA HQ Admin';
+            document.getElementById('sidebarBranch').style.display = 'none';
         }
+        
+        // Build sidebar
+        renderSidebar();
+        
+        // Reset
+        pinEntry = ''; selectedUserId = null; updatePinDisplay();
+        document.getElementById('errorMessage').textContent = '';
+        
+        // Show dashboard
+        switchView('dashboard');
+        console.log('🎉 Login successful!');
+        
+    } else {
+        console.log('❌ Wrong PIN! Expected:', user.pin, 'Got:', pinEntry);
+        document.getElementById('errorMessage').textContent = 'Wrong PIN! Try again.';
+        pinEntry = ''; updatePinDisplay();
+        document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
+        setTimeout(() => document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error')), 400);
     }
+}
 
-    function renderSidebar() {
-        const nav = document.getElementById('sidebarNav');
-        if (currentUser.role === 'admin') {
-            nav.innerHTML = `
-                <button class="nav-btn" onclick="switchView('dashboard')">📊 HQ Dashboard</button>
-                <button class="nav-btn" onclick="switchView('branches')">🏢 Branches</button>
-                <button class="nav-btn" onclick="switchView('allProducts')">📦 All Products</button>
-                <button class="nav-btn" onclick="switchView('allUsers')">👥 All Users</button>
-                <button class="nav-btn" onclick="switchView('allSales')">💰 All Sales</button>
-                <button class="nav-btn" onclick="switchView('settings')">⚙️ Settings</button>
-                <button class="nav-btn" onclick="switchView('reports')">💾 Reports</button>`;
-        } else if (currentUser.role === 'manager') {
-            nav.innerHTML = `
-                <button class="nav-btn" onclick="switchView('dashboard')">📊 Dashboard</button>
-                <button class="nav-btn" onclick="switchView('pos')">💻 POS Terminal</button>
-                <button class="nav-btn" onclick="switchView('inventory')">📦 My Products</button>
-                <button class="nav-btn" onclick="switchView('myUsers')">👥 My Cashiers</button>
-                <button class="nav-btn" onclick="switchView('myActivity')">📋 Activity Log</button>
-                <button class="nav-btn" onclick="switchView('branchSales')">💰 Sales</button>
-                <button class="nav-btn" onclick="switchView('branchBackup')">💾 Database</button>
-                <button class="nav-btn" onclick="switchView('settings')">⚙️ Settings</button>`;
-        } else {
-            nav.innerHTML = `
-                <button class="nav-btn" onclick="switchView('dashboard')">📊 Dashboard</button>
-                <button class="nav-btn" onclick="switchView('pos')">💻 POS Terminal</button>`;
-        }
-    }
-
-    function logout() {
-        if (cart.length > 0 && !confirm('Cart has items. Logout?')) return;
-        currentUser = null; cart = []; discountRate = 0;
-        document.getElementById('mainApp').style.display = 'none';
-        closeSidebar(); renderLoginScreen();
-        console.log('Logged out');
-    }
-
-    function openSidebar() { document.getElementById('sidebar').classList.add('active'); document.getElementById('sidebarOverlay').classList.add('active'); }
-    function closeSidebar() { document.getElementById('sidebar').classList.remove('active'); document.getElementById('sidebarOverlay').classList.remove('active'); }
-
-    // ==================== VIEW SWITCHER ====================
-    function switchView(view) {
-        currentView = view; closeSidebar();
-        const el = document.getElementById('mainContent');
-        console.log('Switching to:', view);
-        switch (view) {
-            case 'dashboard': renderDashboard(el); break;
-            case 'pos': renderPOS(el); break;
-            case 'branches': renderBranches(el); break;
-            case 'allProducts': renderAllProducts(el); break;
-            case 'inventory': renderInventory(el); break;
-            case 'allUsers': renderAllUsers(el); break;
-            case 'myUsers': renderMyUsers(el); break;
-            case 'myActivity': renderMyActivity(el); break;
-            case 'allSales': renderAllSales(el); break;
-            case 'branchSales': renderBranchSales(el); break;
-            case 'branchBackup': renderBranchBackup(el); break;
-            case 'settings': renderSettings(el); break;
-            case 'reports': renderReports(el); break;
-            default: renderDashboard(el);
-        }
-    }
-
-    // ==================== DASHBOARD ====================
-    function renderDashboard(el) {
-        const today = new Date().toISOString().split('T')[0];
-        const thisMonth = today.substring(0, 7);
-        const mySales = getMyData('sales');
-        const myProducts = getMyData('products');
-        const todaySales = mySales.filter(s => s.date === today).reduce((s, i) => s + i.total, 0);
-        const monthSales = mySales.filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.total, 0);
-        const lowStock = myProducts.filter(p => p.active && p.stock < 10).length;
-
-        if (currentUser.role === 'admin') {
-            const allBranches = DB.getAll('branches');
-            const allSales = DB.getAll('sales');
-            const totalMonth = allSales.filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.total, 0);
-            el.innerHTML = `
-                <div class="metrics">
-                    <div class="metric-card"><div class="metric-value">${allBranches.length}</div><div class="metric-label">Branches</div></div>
-                    <div class="metric-card"><div class="metric-value">${formatCurrency(totalMonth)}</div><div class="metric-label">Total Revenue</div></div>
-                    <div class="metric-card"><div class="metric-value">${DB.getAll('users').length}</div><div class="metric-label">Users</div></div>
-                    <div class="metric-card"><div class="metric-value">${DB.getAll('products').length}</div><div class="metric-label">Products</div></div>
-                </div>
-                <div class="card"><h4>🏢 Branch Overview</h4>
-                    ${allBranches.map(b => {
-                        const bSales = DB.getByBranch('sales', b.id).filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.total, 0);
-                        return `<div style="padding:8px 0;border-bottom:1px solid #2a3a5e;cursor:pointer;" onclick="switchView('branches')">
-                            <strong>🏢 ${b.name}</strong> <span style="float:right;color:#9b8fff;">${formatCurrency(bSales)}</span>
-                        </div>`;
-                    }).join('')}
-                </div>`;
-        } else {
-            el.innerHTML = `
-                <div class="metrics">
-                    <div class="metric-card"><div class="metric-value">${formatCurrency(todaySales)}</div><div class="metric-label">Today</div></div>
-                    <div class="metric-card"><div class="metric-value">${formatCurrency(monthSales)}</div><div class="metric-label">This Month</div></div>
-                    <div class="metric-card"><div class="metric-value">${myProducts.length}</div><div class="metric-label">Products</div></div>
-                    <div class="metric-card"><div class="metric-value">${lowStock}</div><div class="metric-label">Low Stock</div></div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                    <button class="btn btn-primary" onclick="switchView('pos')">🛒 POS</button>
-                    <button class="btn btn-success" onclick="switchView('inventory')">📦 Products</button>
-                    <button class="btn btn-warning" onclick="switchView('myUsers')">👥 Cashiers</button>
-                    <button class="btn btn-primary" onclick="switchView('myActivity')">📋 Activity</button>
-                </div>
-                ${lowStock > 0 ? `<div class="alert alert-warning">⚠️ ${lowStock} products low on stock!</div>` : ''}`;
-        }
-    }
-
-    // ==================== POS ====================
-    function renderPOS(el) {
-        const myProducts = getMyData('products').filter(p => p.active);
-        const subtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
-        const total = subtotal + (subtotal * taxRate);
-        el.innerHTML = `
-            <input type="text" id="scanInput" placeholder="🔍 Scan barcode or search..." onkeypress="if(event.key==='Enter'){addToCart(event.target.value);event.target.value='';}">
-            <div class="product-grid">${myProducts.slice(0, 8).map(p => `
-                <div class="product-card" onclick="addToCart('${p.sku}')"><strong>${p.name}</strong><div style="color:#9b8fff;">${formatCurrency(p.price)}</div><small>Stock: ${p.stock}</small></div>
-            `).join('')}</div>
-            <div class="card" style="margin-top:10px;"><h4>🛒 Cart (${cart.length})</h4>
-                ${cart.map((item, i) => `<div class="cart-item"><span>${item.name} x${item.quantity}</span><span>${formatCurrency(item.price * item.quantity)}</span><button class="btn btn-danger btn-xs" onclick="removeFromCart(${i})">✕</button></div>`).join('') || '<p style="color:#a0a0b0;">Empty</p>'}
-                <hr style="border-color:#2a3a5e;"><div>Total: <strong style="color:#9b8fff;font-size:1.2em;">${formatCurrency(total)}</strong></div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
-                    <button class="btn btn-success" onclick="processPayment('cash')">💵 Cash</button>
-                    <button class="btn btn-primary" onclick="processPayment('card')">💳 Card</button>
-                </div></div>`;
-        setTimeout(() => { const si = document.getElementById('scanInput'); if (si) si.focus(); }, 100);
-    }
-
-    function addToCart(sku) {
-        const product = getMyData('products').find(p => (p.sku === sku || p.barcode === sku) && p.active);
-        if (product && product.stock > 0) {
-            const existing = cart.find(i => i.sku === product.sku);
-            if (existing) existing.quantity++; else cart.push({ ...product, quantity: 1 });
-            switchView('pos');
-        } else { alert('Product not found or out of stock!'); }
-    }
-    function removeFromCart(i) { cart.splice(i, 1); switchView('pos'); }
-
-    function processPayment(method) {
-        if (cart.length === 0) { alert('Cart empty!'); return; }
-        const subtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
-        const total = subtotal + (subtotal * taxRate);
-        const sale = {
-            date: new Date().toISOString().split('T')[0], total, subtotal, tax: subtotal * taxRate,
-            paymentMethod: method, cashierId: currentUser.id, cashierName: currentUser.name,
-            branchId: currentUser.branchId, currency: currentCurrency
-        };
-        const saleId = DB.add('sales', sale);
-        cart.forEach(item => {
-            const product = DB.getById('products', item.id);
-            if (product) { product.stock -= item.quantity; DB.update('products', product); }
-        });
-        logActivity('Sale', `#${saleId}: ${formatCurrency(total)} via ${method}`);
-        document.getElementById('modalContent').innerHTML = `<div style="text-align:center;"><h3>✅ Sale Complete!</h3><h2 style="color:#9b8fff;">${formatCurrency(total)}</h2><p>Receipt #${saleId}</p></div>`;
-        document.getElementById('modal').classList.add('active');
-        cart = []; discountRate = 0;
-        setTimeout(() => { document.getElementById('modal').classList.remove('active'); switchView('dashboard'); }, 2000);
-    }
-
-    // ==================== BRANCHES (ADMIN) ====================
-    function renderBranches(el) {
-        if (currentUser.role !== 'admin') { el.innerHTML = '<p class="empty-state">🔒 Admin only</p>'; return; }
-        branches = DB.getAll('branches');
-        const thisMonth = new Date().toISOString().substring(0, 7);
-        el.innerHTML = `
-            <h4>🏢 Branch Management</h4>
-            <button class="btn btn-primary btn-block" onclick="showAddBranch()">+ Add New Branch</button>
-            ${branches.map(b => {
-                const bUsers = DB.getByBranch('users', b.id);
-                const bProducts = DB.getByBranch('products', b.id);
-                const bSales = DB.getByBranch('sales', b.id).filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.total, 0);
-                return `<div class="card">
-                    <h4>🏢 ${b.name} <span style="font-size:.7em;color:#a0a0b0;">ID:${b.id}</span></h4>
-                    <p style="color:#a0a0b0;font-size:.8em;">📍 ${b.address || 'No address'} | 📞 ${b.phone || 'No phone'}</p>
-                    <div class="metrics">
-                        <div class="metric-card"><div class="metric-value">${bUsers.length}</div><div class="metric-label">Users</div></div>
-                        <div class="metric-card"><div class="metric-value">${bProducts.length}</div><div class="metric-label">Products</div></div>
-                        <div class="metric-card"><div class="metric-value">${formatCurrency(bSales)}</div><div class="metric-label">Month Sales</div></div>
-                    </div>
-                    <button class="btn btn-success btn-sm" onclick="showAddBranchUser(${b.id})">+ Add User</button>
-                    <button class="btn btn-warning btn-sm" onclick="editBranch(${b.id})">✎ Edit</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteBranch(${b.id})">🗑️</button>
-                </div>`;
-            }).join('')}`;
-    }
-
-    function showAddBranch() {
-        document.getElementById('modalContent').innerHTML = `
-            <h4>Add New Branch</h4>
-            <input type="text" id="bName" placeholder="Branch Name *">
-            <input type="text" id="bAddress" placeholder="Address">
-            <input type="tel" id="bPhone" placeholder="Phone">
-            <button class="btn btn-primary" onclick="addBranch()">💾 Create Branch</button>
-            <button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;
-        document.getElementById('modal').classList.add('active');
-    }
-
-    function addBranch() {
-        const name = document.getElementById('bName').value;
-        if (!name) { alert('Branch name required!'); return; }
-        const branchId = DB.add('branches', { name, address: document.getElementById('bAddress').value, phone: document.getElementById('bPhone').value });
-        branches = DB.getAll('branches'); closeModal();
-        if (confirm(`Branch "${name}" created! Add a manager now?`)) { showAddBranchUser(branchId); }
-        else { switchView('branches'); }
-    }
-
-    function showAddBranchUser(branchId) {
-        const branch = DB.getById('branches', branchId);
-        document.getElementById('modalContent').innerHTML = `
-            <h4>Add User to ${branch?.name || 'Branch'}</h4>
-            <input type="text" id="uName" placeholder="Name *">
-            <select id="uRole"><option value="manager">Manager</option><option value="cashier">Cashier</option></select>
-            <input type="password" id="uPin" placeholder="4-digit PIN *" maxlength="4">
-            <button class="btn btn-primary" onclick="addBranchUser(${branchId})">💾 Save</button>
-            <button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;
-        document.getElementById('modal').classList.add('active');
-    }
-
-    function addBranchUser(branchId) {
-        const name = document.getElementById('uName').value;
-        const pin = document.getElementById('uPin').value;
-        const role = document.getElementById('uRole').value;
-        if (!name || pin.length !== 4) { alert('Name and 4-digit PIN required!'); return; }
-        DB.add('users', { name, role, active: true, pin, branchId });
-        users = DB.getAll('users'); closeModal(); switchView('branches'); renderLoginScreen();
-        logActivity('Added User', `${name} (${role}) to branch`);
-    }
-
-    function editBranch(id) {
-        const b = DB.getById('branches', id);
-        document.getElementById('modalContent').innerHTML = `
-            <h4>Edit Branch</h4>
-            <input type="text" id="bName" value="${b.name}">
-            <input type="text" id="bAddress" value="${b.address || ''}">
-            <input type="tel" id="bPhone" value="${b.phone || ''}">
-            <button class="btn btn-primary" onclick="saveBranch(${id})">💾 Save</button>
-            <button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;
-        document.getElementById('modal').classList.add('active');
-    }
-
-    function saveBranch(id) {
-        const b = DB.getById('branches', id);
-        b.name = document.getElementById('bName').value;
-        b.address = document.getElementById('bAddress').value;
-        b.phone = document.getElementById('bPhone').value;
-        DB.update('branches', b); branches = DB.getAll('branches');
-        closeModal(); switchView('branches');
-    }
-
-    function deleteBranch(id) {
-        const bUsers = DB.getByBranch('users', id);
-        if (bUsers.length > 0) { alert(`Cannot delete branch with ${bUsers.length} users.`); return; }
-        if (confirm('Delete this branch?')) { DB.delete('branches', id); branches = DB.getAll('branches'); switchView('branches'); }
-    }
-
-    // ==================== INVENTORY ====================
-    function renderInventory(el) {
-        const myProducts = getMyData('products');
-        el.innerHTML = `
-            <h4>📦 My Products</h4>
-            <button class="btn btn-primary btn-block" onclick="showAddProduct()">+ Add Product</button>
-            <div style="overflow-x:auto;"><table><thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Act</th></tr></thead>
-            <tbody>${myProducts.map(p => `<tr><td>${p.name}</td><td>${formatCurrency(p.price)}</td><td class="${p.stock < 10 ? 'stock-low' : ''}">${p.stock}</td>
-            <td><button class="btn btn-success btn-xs" onclick="adjustStock(${p.id})">+</button></td></tr>`).join('')}</tbody></table></div>
-            ${myProducts.length === 0 ? '<p class="empty-state">No products yet</p>' : ''}`;
-    }
-
-    function renderAllProducts(el) {
-        const all = DB.getAll('products');
-        el.innerHTML = `<h4>📦 All Products</h4>
-            <table><thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Branch</th></tr></thead>
-            <tbody>${all.map(p => { const b = p.branchId ? DB.getById('branches', p.branchId) : null; return `<tr><td>${p.name}</td><td>${formatCurrency(p.price)}</td><td>${p.stock}</td><td>${b?.name || 'Global'}</td></tr>`; }).join('')}</tbody></table>`;
-    }
-
-    function showAddProduct() {
-        document.getElementById('modalContent').innerHTML = `
-            <h4>Add Product</h4>
-            <input type="text" id="pName" placeholder="Name *">
-            <input type="number" id="pPrice" placeholder="Price *" step="0.01">
-            <input type="number" id="pStock" placeholder="Stock" value="0">
-            <input type="text" id="pSku" placeholder="SKU (auto if empty)">
-            <button class="btn btn-primary" onclick="addProduct()">💾 Save</button>
-            <button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;
-        document.getElementById('modal').classList.add('active');
-    }
-
-    function addProduct() {
-        const name = document.getElementById('pName').value;
-        const price = parseFloat(document.getElementById('pPrice').value);
-        if (!name || !price) { alert('Name and price required!'); return; }
-        DB.add('products', { sku: document.getElementById('pSku').value || ('SKU' + Date.now()), name, price, stock: parseInt(document.getElementById('pStock').value) || 0, category: 'General', active: true, barcode: '', branchId: currentUser.branchId });
-        logActivity('Added Product', `${name} at ${formatCurrency(price)}`);
-        closeModal(); switchView('inventory');
-    }
-
-    function adjustStock(id) {
-        const p = DB.getById('products', id);
-        document.getElementById('modalContent').innerHTML = `
-            <h4>Adjust Stock: ${p.name}</h4><p style="color:#a0a0b0;">Current: ${p.stock}</p>
-            <input type="number" id="newStock" value="${p.stock}">
-            <select id="adjReason"><option>Restock</option><option>Damage</option><option>Correction</option></select>
-            <button class="btn btn-primary" onclick="saveAdjust(${id})">💾 Save</button>
-            <button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;
-        document.getElementById('modal').classList.add('active');
-    }
-
-    function saveAdjust(id) {
-        const p = DB.getById('products', id);
-        const old = p.stock;
-        p.stock = parseInt(document.getElementById('newStock').value);
-        DB.update('products', p);
-        DB.add('inventoryLogs', { productId: id, oldStock: old, newStock: p.stock, reason: document.getElementById('adjReason').value, userName: currentUser.name, branchId: currentUser.branchId });
-        logActivity('Stock Adjust', `${p.name}: ${old}→${p.stock}`);
-        closeModal(); switchView('inventory');
-    }
-
-    // ==================== USERS ====================
-    function renderMyUsers(el) {
-        const myUsers = getMyData('users').filter(u => u.role === 'cashier');
-        el.innerHTML = `
-            <h4>👥 My Cashiers</h4>
-            <button class="btn btn-primary btn-block" onclick="showAddBranchUser(${currentUser.branchId})">+ Add Cashier</button>
-            ${myUsers.map(u => `<div class="card" style="display:flex;justify-content:space-between;align-items:center;">
-                <div><strong>${u.name}</strong> <span class="role-badge cashier-badge">cashier</span> ${u.active ? '✅' : '❌'}</div>
-                <div><button class="btn btn-warning btn-xs" onclick="toggleBranchUser(${u.id})">${u.active ? 'Deact' : 'Act'}</button>
-                <button class="btn btn-danger btn-xs" onclick="deleteBranchUser(${u.id})">🗑️</button></div>
-            </div>`).join('')}
-            ${myUsers.length === 0 ? '<p class="empty-state">No cashiers yet</p>' : ''}`;
-    }
-
-    function renderAllUsers(el) {
-        const all = DB.getAll('users');
-        el.innerHTML = `<h4>👥 All Users</h4>
-            ${all.map(u => { const b = u.branchId ? DB.getById('branches', u.branchId) : null;
-                return `<div class="card"><strong>${u.name}</strong> <span class="role-badge ${u.role}-badge">${u.role}</span> ${u.active ? '✅' : '❌'} <span style="font-size:.7em;color:#a0a0b0;">${b ? '🏢 ' + b.name : '👑 Admin'}</span></div>`; }).join('')}`;
-    }
-
-    function toggleBranchUser(id) {
-        const u = DB.getById('users', id);
-        if (u.branchId !== currentUser.branchId) { alert('Not your branch user!'); return; }
-        u.active = !u.active; DB.update('users', u); users = DB.getAll('users');
-        logActivity(u.active ? 'Activated' : 'Deactivated', u.name);
-        switchView('myUsers'); renderLoginScreen();
-    }
-
-    function deleteBranchUser(id) {
-        const u = DB.getById('users', id);
-        if (u.branchId !== currentUser.branchId) { alert('Not your branch user!'); return; }
-        if (confirm(`Delete ${u.name}?`)) { DB.delete('users', id); users = DB.getAll('users'); logActivity('Deleted User', u.name); switchView('myUsers'); renderLoginScreen(); }
-    }
-
-    // ==================== ACTIVITY & SALES ====================
-    function renderMyActivity(el) {
-        const logs = DB.getAll('activityLogs').filter(l => l.branchId === currentUser.branchId).slice(-50).reverse();
-        el.innerHTML = `<h4>📋 Activity Log</h4>
-            ${logs.map(l => `<div style="padding:6px 0;border-bottom:1px solid #2a3a5e;font-size:.8em;"><span style="color:#7c6fff;">${new Date(l.timestamp).toLocaleString()}</span><br><strong>${l.userName}</strong>: ${l.action} - ${l.details}</div>`).join('')}
-            ${logs.length === 0 ? '<p class="empty-state">No activity yet</p>' : ''}`;
-    }
-
-    function renderBranchSales(el) {
-        const sales = getMyData('sales').slice(-30).reverse();
-        el.innerHTML = `<h4>💰 Branch Sales</h4>
-            ${sales.map(s => `<div class="card"><div style="display:flex;justify-content:space-between;"><span>#${s.id} ${s.date}</span><span style="color:#9b8fff;font-weight:bold;">${formatCurrency(s.total)}</span></div><p style="color:#a0a0b0;font-size:.75em;">${s.paymentMethod} | ${s.cashierName}</p></div>`).join('')}
-            ${sales.length === 0 ? '<p class="empty-state">No sales yet</p>' : ''}`;
-    }
-
-    function renderAllSales(el) {
-        const all = DB.getAll('sales').slice(-30).reverse();
-        el.innerHTML = `<h4>💰 All Sales</h4>
-            ${all.map(s => `<div class="card"><strong>#${s.id}</strong> ${formatCurrency(s.total)} <span style="font-size:.7em;color:#a0a0b0;">${s.date} | ${s.paymentMethod}</span></div>`).join('')}`;
-    }
-
-    // ==================== BRANCH BACKUP ====================
-    function renderBranchBackup(el) {
-        el.innerHTML = `
-            <h4>💾 Branch Database</h4>
-            <button class="btn btn-primary btn-block" onclick="backupBranchData()">📥 Download Backup</button>
-            <button class="btn btn-warning btn-block" onclick="restoreBranchData()">📤 Restore Backup</button>
-            <div class="alert alert-danger" style="margin-top:15px;"><strong>⚠️ Danger Zone</strong></div>
-            <button class="btn btn-danger btn-block" onclick="clearBranchData()">🗑️ Clear Branch Data</button>`;
-    }
-
-    function backupBranchData() {
-        const data = {};
-        ['products', 'sales', 'users', 'activityLogs'].forEach(s => { data[s] = DB.getByBranch(s, currentUser.branchId); });
-        const branch = DB.getById('branches', currentUser.branchId);
-        data.branch = branch;
-        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = `${branch?.name || 'branch'}_backup_${new Date().toISOString().split('T')[0]}.json`; a.click();
-        logActivity('Backup', 'Downloaded branch backup');
-        alert('✅ Backup downloaded!');
-    }
-
-    function restoreBranchData() {
-        document.getElementById('modalContent').innerHTML = `
-            <h4>📤 Restore Branch Data</h4>
-            <div class="alert alert-warning">⚠️ This REPLACES current branch data!</div>
-            <input type="file" id="backupFile" accept=".json">
-            <button class="btn btn-primary" onclick="performBranchRestore()">🔄 Restore</button>
-            <button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;
-        document.getElementById('modal').classList.add('active');
-    }
-
-    function performBranchRestore() {
-        const file = document.getElementById('backupFile').files[0];
-        if (!file) { alert('Select a file!'); return; }
-        if (!confirm('Replace all branch data?')) return;
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-            const data = JSON.parse(ev.target.result);
-            ['products', 'sales', 'users', 'activityLogs'].forEach(s => {
-                const all = DB.getAll(s).filter(i => i.branchId !== currentUser.branchId);
-                const restored = (data[s] || []).map(i => { i.branchId = currentUser.branchId; return i; });
-                DB.set(s, [...all, ...restored]);
-            });
-            alert('✅ Restored! Reloading...'); closeModal(); location.reload();
-        };
-        reader.readAsText(file);
-    }
-
-    function clearBranchData() {
-        if (!confirm('⚠️ DELETE all branch data?')) return;
-        if (!confirm('FINAL: All products, sales, users for this branch will be deleted!')) return;
-        ['products', 'sales', 'users', 'activityLogs'].forEach(s => {
-            DB.set(s, DB.getAll(s).filter(i => i.branchId !== currentUser.branchId));
-        });
-        logActivity('Clear Data', 'Cleared all branch data');
-        alert('🗑️ Branch data cleared!'); switchView('dashboard');
-    }
-
-    // ==================== SETTINGS & REPORTS ====================
-    function renderSettings(el) {
-        el.innerHTML = `
-            <div class="card"><h4>💱 Currency</h4><select id="currencySelect" onchange="changeCurrency(this.value)">${Object.entries(currencies).map(([code, c]) => `<option value="${code}" ${currentCurrency === code ? 'selected' : ''}>${c.flag} ${c.name}</option>`).join('')}</select></div>
-            <div class="card"><h4>💰 Tax</h4><input type="number" id="taxInput" value="${taxRate * 100}" step="0.1"><button class="btn btn-primary btn-sm" onclick="saveTax()">Save Tax</button></div>
-            <div class="card"><h4>📄 Business Info</h4><input type="text" id="bizName" value="${businessName}"><input type="text" id="bizAddress" value="${businessAddress}" placeholder="Address"><input type="text" id="footerInput" value="${receiptFooter}"><button class="btn btn-primary btn-sm" onclick="saveBizInfo()">Save</button></div>`;
-    }
-
-    function changeCurrency(code) { currentCurrency = code; saveSetting('currency', code); switchView('settings'); }
-    function saveTax() { const v = parseFloat(document.getElementById('taxInput').value); if (v >= 0 && v <= 30) { taxRate = v / 100; saveSetting('taxRate', taxRate.toString()); alert('Saved!'); } }
-    function saveBizInfo() { businessName = document.getElementById('bizName').value; businessAddress = document.getElementById('bizAddress').value; receiptFooter = document.getElementById('footerInput').value; saveSetting('businessName', businessName); saveSetting('businessAddress', businessAddress); saveSetting('receiptFooter', receiptFooter); alert('Saved!'); }
-
-    // ==================== ENHANCED REPORTS SYSTEM ====================
-
-// Replace the existing renderReports function with this:
-function renderReports(el) {
-    const today = new Date().toISOString().split('T')[0];
-    const thisMonth = today.substring(0, 7);
-    const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().substring(0, 7);
+function renderSidebar() {
+    const nav = document.getElementById('sidebarNav');
+    if (!currentUser) return;
     
     if (currentUser.role === 'admin') {
-        renderAdminReports(el, today, thisMonth, lastMonth);
+        nav.innerHTML = `
+            <button class="nav-btn" onclick="switchView('dashboard')">📊 HQ Dashboard</button>
+            <button class="nav-btn" onclick="switchView('branches')">🏢 Branches</button>
+            <button class="nav-btn" onclick="switchView('allProducts')">📦 All Products</button>
+            <button class="nav-btn" onclick="switchView('allUsers')">👥 All Users</button>
+            <button class="nav-btn" onclick="switchView('allSales')">💰 All Sales</button>
+            <button class="nav-btn" onclick="switchView('settings')">⚙️ Settings</button>
+            <button class="nav-btn" onclick="switchView('reports')">📊 Reports</button>`;
+    } else if (currentUser.role === 'manager') {
+        nav.innerHTML = `
+            <button class="nav-btn" onclick="switchView('dashboard')">📊 Dashboard</button>
+            <button class="nav-btn" onclick="switchView('pos')">💻 POS Terminal</button>
+            <button class="nav-btn" onclick="switchView('inventory')">📦 My Products</button>
+            <button class="nav-btn" onclick="switchView('myUsers')">👥 My Cashiers</button>
+            <button class="nav-btn" onclick="switchView('myActivity')">📋 Activity Log</button>
+            <button class="nav-btn" onclick="switchView('branchSales')">💰 Sales</button>
+            <button class="nav-btn" onclick="switchView('branchBackup')">💾 Database</button>
+            <button class="nav-btn" onclick="switchView('settings')">⚙️ Settings</button>
+            <button class="nav-btn" onclick="switchView('reports')">📊 Reports</button>`;
     } else {
-        renderBranchReports(el, today, thisMonth, lastMonth);
+        nav.innerHTML = `
+            <button class="nav-btn" onclick="switchView('dashboard')">📊 Dashboard</button>
+            <button class="nav-btn" onclick="switchView('pos')">💻 POS Terminal</button>`;
     }
 }
 
-// ==================== ADMIN REPORTS ====================
-function renderAdminReports(el, today, thisMonth, lastMonth) {
-    const allSales = DB.getAll('sales');
-    const allBranches = DB.getAll('branches');
-    const allProducts = DB.getAll('products');
-    const allUsers = DB.getAll('users');
-    
-    // Calculate totals
-    const todaySales = allSales.filter(s => s.date === today).reduce((s, i) => s + i.total, 0);
-    const monthSales = allSales.filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.total, 0);
-    const lastMonthSales = allSales.filter(s => s.date.startsWith(lastMonth)).reduce((s, i) => s + i.total, 0);
-    const monthTax = allSales.filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.tax, 0);
-    
-    // Payment method breakdown
-    const cashSales = allSales.filter(s => s.date.startsWith(thisMonth) && s.paymentMethod === 'cash').reduce((s, i) => s + i.total, 0);
-    const cardSales = allSales.filter(s => s.date.startsWith(thisMonth) && s.paymentMethod === 'card').reduce((s, i) => s + i.total, 0);
-    
-    // Branch performance
-    const branchPerformance = allBranches.map(b => {
-        const bSales = allSales.filter(s => s.branchId === b.id && s.date.startsWith(thisMonth));
-        const bTotal = bSales.reduce((s, i) => s + i.total, 0);
-        const bCount = bSales.length;
-        const bUsers = allUsers.filter(u => u.branchId === b.id).length;
-        const bProducts = allProducts.filter(p => p.branchId === b.id).length;
-        return { ...b, total: bTotal, count: bCount, users: bUsers, products: bProducts };
-    }).sort((a, b) => b.total - a.total);
-    
-    // Top products
-    const productSales = {};
-    allSales.filter(s => s.date.startsWith(thisMonth)).forEach(s => {
-        if (s.items) {
-            s.items.forEach(item => {
-                if (!productSales[item.name]) productSales[item.name] = { name: item.name, quantity: 0, total: 0 };
-                productSales[item.name].quantity += item.quantity;
-                productSales[item.name].total += item.price * item.quantity;
-            });
-        }
-    });
-    const topProducts = Object.values(productSales).sort((a, b) => b.total - a.total).slice(0, 5);
-    
-    el.innerHTML = `
-        <!-- Summary Cards -->
-        <div class="metrics">
-            <div class="metric-card"><div class="metric-value">${formatCurrency(todaySales)}</div><div class="metric-label">Today</div></div>
-            <div class="metric-card"><div class="metric-value">${formatCurrency(monthSales)}</div><div class="metric-label">This Month</div></div>
-            <div class="metric-card"><div class="metric-value">${formatCurrency(monthTax)}</div><div class="metric-label">Tax Collected</div></div>
-            <div class="metric-card"><div class="metric-value">${allSales.filter(s => s.date.startsWith(thisMonth)).length}</div><div class="metric-label">Transactions</div></div>
-        </div>
-
-        <!-- Month-over-Month Comparison -->
-        <div class="card">
-            <h4>📈 Month Comparison</h4>
-            <div style="display:flex;justify-content:space-between;text-align:center;">
-                <div><div style="color:#a0a0b0;font-size:.7em;">Last Month</div><div style="color:#9b8fff;">${formatCurrency(lastMonthSales)}</div></div>
-                <div style="font-size:1.5em;">→</div>
-                <div><div style="color:#a0a0b0;font-size:.7em;">This Month</div><div style="color:#2ed573;">${formatCurrency(monthSales)}</div></div>
-            </div>
-            ${lastMonthSales > 0 ? `
-                <div style="margin-top:8px;text-align:center;">
-                    <span style="color:${monthSales >= lastMonthSales ? '#2ed573' : '#ff4757'};font-size:.9em;">
-                        ${monthSales >= lastMonthSales ? '📈' : '📉'} ${Math.abs(((monthSales - lastMonthSales) / lastMonthSales * 100)).toFixed(1)}% ${monthSales >= lastMonthSales ? 'increase' : 'decrease'}
-                    </span>
-                </div>` : ''}
-        </div>
-
-        <!-- Payment Method Breakdown -->
-        <div class="card">
-            <h4>💳 Payment Methods (This Month)</h4>
-            <div style="display:flex;gap:10px;">
-                <div style="flex:1;text-align:center;background:#16213e;border-radius:8px;padding:10px;">
-                    <div style="font-size:1.5em;">💵</div>
-                    <div style="color:#9b8fff;">${formatCurrency(cashSales)}</div>
-                    <div style="font-size:.7em;color:#a0a0b0;">Cash (${monthSales > 0 ? ((cashSales / monthSales) * 100).toFixed(0) : 0}%)</div>
-                </div>
-                <div style="flex:1;text-align:center;background:#16213e;border-radius:8px;padding:10px;">
-                    <div style="font-size:1.5em;">💳</div>
-                    <div style="color:#9b8fff;">${formatCurrency(cardSales)}</div>
-                    <div style="font-size:.7em;color:#a0a0b0;">Card (${monthSales > 0 ? ((cardSales / monthSales) * 100).toFixed(0) : 0}%)</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Branch Performance -->
-        <div class="card">
-            <h4>🏢 Branch Performance</h4>
-            <div style="overflow-x:auto;">
-                <table>
-                    <thead><tr><th>Branch</th><th>Sales</th><th>Trans</th><th>Users</th></tr></thead>
-                    <tbody>
-                        ${branchPerformance.map((b, i) => `
-                            <tr>
-                                <td>${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : ''} ${b.name}</td>
-                                <td style="color:#9b8fff;">${formatCurrency(b.total)}</td>
-                                <td>${b.count}</td>
-                                <td>${b.users}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Top Products -->
-        ${topProducts.length > 0 ? `
-        <div class="card">
-            <h4>🔥 Top Products</h4>
-            ${topProducts.map((p, i) => `
-                <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #2a3a5e;">
-                    <span>${i + 1}. ${p.name}</span>
-                    <span style="color:#a0a0b0;">x${p.quantity}</span>
-                    <span style="color:#9b8fff;">${formatCurrency(p.total)}</span>
-                </div>
-            `).join('')}
-        </div>` : ''}
-
-        <!-- Export Buttons -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
-            <button class="btn btn-primary btn-sm" onclick="exportFullReport('monthly')">📊 Monthly Report</button>
-            <button class="btn btn-success btn-sm" onclick="exportFullReport('daily')">📋 Daily Report</button>
-            <button class="btn btn-primary btn-sm" onclick="exportCSV('sales')">💰 Sales CSV</button>
-            <button class="btn btn-warning btn-sm" onclick="exportFullReport('branch')">🏢 Branch Report</button>
-        </div>
-        <button class="btn btn-primary btn-block" onclick="backupAllData()">💾 Full Backup</button>
-    `;
+function logout() {
+    if (cart.length > 0 && !confirm('Cart has items. Logout?')) return;
+    currentUser = null; cart = []; discountRate = 0;
+    document.getElementById('mainApp').style.display = 'none';
+    closeSidebar(); renderLoginScreen();
+    console.log('👋 Logged out');
 }
 
-// ==================== BRANCH MANAGER REPORTS ====================
-function renderBranchReports(el, today, thisMonth, lastMonth) {
+function openSidebar() { document.getElementById('sidebar').classList.add('active'); document.getElementById('sidebarOverlay').classList.add('active'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('active'); document.getElementById('sidebarOverlay').classList.remove('active'); }
+
+// ==================== VIEW SWITCHER ====================
+function switchView(view) {
+    currentView = view; closeSidebar();
+    const el = document.getElementById('mainContent');
+    console.log('🔄 Switching to:', view);
+    
+    switch (view) {
+        case 'dashboard': renderDashboard(el); break;
+        case 'pos': renderPOS(el); break;
+        case 'branches': renderBranches(el); break;
+        case 'allProducts': renderAllProducts(el); break;
+        case 'inventory': renderInventory(el); break;
+        case 'allUsers': renderAllUsers(el); break;
+        case 'myUsers': renderMyUsers(el); break;
+        case 'myActivity': renderMyActivity(el); break;
+        case 'allSales': renderAllSales(el); break;
+        case 'branchSales': renderBranchSales(el); break;
+        case 'branchBackup': renderBranchBackup(el); break;
+        case 'settings': renderSettings(el); break;
+        case 'reports': renderReports(el); break;
+        default: renderDashboard(el);
+    }
+}
+
+// ==================== DASHBOARD ====================
+function renderDashboard(el) {
+    const today = new Date().toISOString().split('T')[0];
+    const thisMonth = today.substring(0, 7);
     const mySales = getMyData('sales');
     const myProducts = getMyData('products');
-    const myUsers = getMyData('users');
-    
-    // Calculate totals
     const todaySales = mySales.filter(s => s.date === today).reduce((s, i) => s + i.total, 0);
-    const todayCount = mySales.filter(s => s.date === today).length;
     const monthSales = mySales.filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.total, 0);
-    const monthCount = mySales.filter(s => s.date.startsWith(thisMonth)).length;
-    const lastMonthSales = mySales.filter(s => s.date.startsWith(lastMonth)).reduce((s, i) => s + i.total, 0);
-    const monthTax = mySales.filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.tax, 0);
-    const monthAvg = monthCount > 0 ? monthSales / monthCount : 0;
-    
-    // Payment breakdown
-    const cashSales = mySales.filter(s => s.date.startsWith(thisMonth) && s.paymentMethod === 'cash').reduce((s, i) => s + i.total, 0);
-    const cardSales = mySales.filter(s => s.date.startsWith(thisMonth) && s.paymentMethod === 'card').reduce((s, i) => s + i.total, 0);
-    
-    // Cashier performance
-    const cashierPerformance = myUsers.filter(u => u.role === 'cashier' && u.active).map(c => {
-        const cSales = mySales.filter(s => s.cashierId === c.id && s.date.startsWith(thisMonth));
-        return {
-            name: c.name,
-            total: cSales.reduce((s, i) => s + i.total, 0),
-            count: cSales.length,
-            avg: cSales.length > 0 ? cSales.reduce((s, i) => s + i.total, 0) / cSales.length : 0
-        };
-    }).sort((a, b) => b.total - a.total);
-    
-    // Daily breakdown (last 7 days)
-    const dailyBreakdown = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
-        const daySales = mySales.filter(s => s.date === dateStr).reduce((s, sale) => s + sale.total, 0);
-        dailyBreakdown.push({ date: dateStr, total: daySales, label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) });
-    }
-    
-    // Low stock alert
-    const lowStock = myProducts.filter(p => p.active && p.stock < 10);
-    
-    // Best selling products
-    const productSalesMap = {};
-    mySales.filter(s => s.date.startsWith(thisMonth)).forEach(s => {
-        if (s.items) {
-            s.items.forEach(item => {
-                if (!productSalesMap[item.name]) productSalesMap[item.name] = { name: item.name, qty: 0, total: 0 };
-                productSalesMap[item.name].qty += item.quantity;
-                productSalesMap[item.name].total += item.price * item.quantity;
-            });
-        }
-    });
-    const bestProducts = Object.values(productSalesMap).sort((a, b) => b.total - a.total).slice(0, 5);
-    
-    el.innerHTML = `
-        <!-- Summary -->
-        <div class="metrics">
-            <div class="metric-card"><div class="metric-value">${formatCurrency(todaySales)}</div><div class="metric-label">Today (${todayCount} sales)</div></div>
-            <div class="metric-card"><div class="metric-value">${formatCurrency(monthSales)}</div><div class="metric-label">This Month (${monthCount} sales)</div></div>
-            <div class="metric-card"><div class="metric-value">${formatCurrency(monthAvg)}</div><div class="metric-label">Avg Sale</div></div>
-            <div class="metric-card"><div class="metric-value">${formatCurrency(monthTax)}</div><div class="metric-label">Tax Collected</div></div>
-        </div>
+    const lowStock = myProducts.filter(p => p.active && p.stock < 10).length;
 
-        <!-- Month Comparison -->
-        <div class="card">
-            <h4>📈 Month Comparison</h4>
-            <div style="display:flex;justify-content:space-between;text-align:center;">
-                <div><small style="color:#a0a0b0;">Last Month</small><br><span style="color:#9b8fff;">${formatCurrency(lastMonthSales)}</span></div>
-                <div style="font-size:1.5em;">→</div>
-                <div><small style="color:#a0a0b0;">This Month</small><br><span style="color:#2ed573;">${formatCurrency(monthSales)}</span></div>
+    if (currentUser.role === 'admin') {
+        const allBranches = DB.getAll('branches');
+        const allSales = DB.getAll('sales');
+        const totalMonth = allSales.filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.total, 0);
+        el.innerHTML = `
+            <div class="metrics">
+                <div class="metric-card"><div class="metric-value">${allBranches.length}</div><div class="metric-label">Branches</div></div>
+                <div class="metric-card"><div class="metric-value">${formatCurrency(totalMonth)}</div><div class="metric-label">Total Revenue</div></div>
+                <div class="metric-card"><div class="metric-value">${DB.getAll('users').length}</div><div class="metric-label">Users</div></div>
+                <div class="metric-card"><div class="metric-value">${DB.getAll('products').length}</div><div class="metric-label">Products</div></div>
             </div>
-            ${lastMonthSales > 0 ? `
-                <div style="text-align:center;margin-top:5px;color:${monthSales >= lastMonthSales ? '#2ed573' : '#ff4757'};">
-                    ${monthSales >= lastMonthSales ? '📈' : '📉'} ${Math.abs(((monthSales - lastMonthSales) / lastMonthSales * 100)).toFixed(1)}%
-                </div>` : ''}
-        </div>
-
-        <!-- Daily Breakdown Chart -->
-        <div class="card">
-            <h4>📊 Last 7 Days</h4>
-            ${dailyBreakdown.map(d => {
-                const maxSales = Math.max(...dailyBreakdown.map(x => x.total), 1);
-                const barWidth = (d.total / maxSales * 100);
-                return `
-                <div style="margin:5px 0;">
-                    <div style="display:flex;justify-content:space-between;font-size:.7em;">
-                        <span>${d.label.split(',')[0]}</span>
-                        <span>${formatCurrency(d.total)}</span>
-                    </div>
-                    <div style="background:#2a3a5e;border-radius:5px;height:8px;">
-                        <div style="background:${d.total > 0 ? '#7c6fff' : '#2a3a5e'};height:100%;border-radius:5px;width:${barWidth}%;"></div>
-                    </div>
-                </div>`;
-            }).join('')}
-        </div>
-
-        <!-- Payment Methods -->
-        <div class="card">
-            <h4>💳 Payment Methods</h4>
-            <div style="display:flex;gap:8px;">
-                <div style="flex:1;text-align:center;background:#16213e;border-radius:8px;padding:8px;">
-                    <div>💵</div><div style="color:#9b8fff;">${formatCurrency(cashSales)}</div>
-                    <small style="color:#a0a0b0;">Cash</small>
-                </div>
-                <div style="flex:1;text-align:center;background:#16213e;border-radius:8px;padding:8px;">
-                    <div>💳</div><div style="color:#9b8fff;">${formatCurrency(cardSales)}</div>
-                    <small style="color:#a0a0b0;">Card</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Cashier Performance -->
-        ${cashierPerformance.length > 0 ? `
-        <div class="card">
-            <h4>👤 Cashier Performance</h4>
-            <table>
-                <thead><tr><th>Cashier</th><th>Sales</th><th>Count</th><th>Avg</th></tr></thead>
-                <tbody>${cashierPerformance.map((c, i) => `
-                    <tr>
-                        <td>${i === 0 ? '⭐' : ''} ${c.name}</td>
-                        <td style="color:#9b8fff;">${formatCurrency(c.total)}</td>
-                        <td>${c.count}</td>
-                        <td>${formatCurrency(c.avg)}</td>
-                    </tr>`).join('')}</tbody>
-            </table>
-        </div>` : ''}
-
-        <!-- Top Products -->
-        ${bestProducts.length > 0 ? `
-        <div class="card">
-            <h4>🔥 Best Sellers</h4>
-            ${bestProducts.map((p, i) => `
-                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #2a3a5e;font-size:.85em;">
-                    <span>${i + 1}. ${p.name}</span>
-                    <span style="color:#a0a0b0;">x${p.qty}</span>
-                    <span style="color:#9b8fff;">${formatCurrency(p.total)}</span>
-                </div>`).join('')}
-        </div>` : ''}
-
-        <!-- Low Stock Alert -->
-        ${lowStock.length > 0 ? `
-        <div class="alert alert-warning">
-            ⚠️ <strong>${lowStock.length} products low on stock:</strong><br>
-            ${lowStock.map(p => `${p.name} (${p.stock} left)`).join(', ')}
-        </div>` : ''}
-
-        <!-- Export -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
-            <button class="btn btn-primary btn-sm" onclick="exportBranchReport('summary')">📊 Summary Report</button>
-            <button class="btn btn-success btn-sm" onclick="exportBranchReport('detailed')">📋 Detailed Report</button>
-            <button class="btn btn-primary btn-sm" onclick="exportCSV('sales')">💰 Sales CSV</button>
-            <button class="btn btn-warning btn-sm" onclick="window.print()">🖨️ Print</button>
-        </div>
-    `;
-}
-
-// ==================== EXPORT FUNCTIONS ====================
-function exportFullReport(type) {
-    const today = new Date().toISOString().split('T')[0];
-    const thisMonth = today.substring(0, 7);
-    const allSales = DB.getAll('sales');
-    const allBranches = DB.getAll('branches');
-    let report = '';
-    
-    if (type === 'monthly') {
-        report = 'MLEA POS - MONTHLY REPORT\n';
-        report += '=' .repeat(40) + '\n';
-        report += `Period: ${thisMonth}\n`;
-        report += `Generated: ${new Date().toLocaleString()}\n\n`;
-        
-        const monthSales = allSales.filter(s => s.date.startsWith(thisMonth));
-        report += `Total Sales: ${formatCurrency(monthSales.reduce((s, i) => s + i.total, 0))}\n`;
-        report += `Transactions: ${monthSales.length}\n`;
-        report += `Avg Sale: ${formatCurrency(monthSales.length > 0 ? monthSales.reduce((s, i) => s + i.total, 0) / monthSales.length : 0)}\n\n`;
-        
-        report += 'BRANCH BREAKDOWN:\n';
-        allBranches.forEach(b => {
-            const bSales = monthSales.filter(s => s.branchId === b.id);
-            report += `  ${b.name}: ${formatCurrency(bSales.reduce((s, i) => s + i.total, 0))} (${bSales.length} sales)\n`;
-        });
-    } else if (type === 'daily') {
-        report = `MLEA POS - DAILY REPORT\n${'='.repeat(40)}\nDate: ${today}\n\n`;
-        const daySales = allSales.filter(s => s.date === today);
-        report += `Total: ${formatCurrency(daySales.reduce((s, i) => s + i.total, 0))}\n`;
-        report += `Sales: ${daySales.length}\n\n`;
-        daySales.forEach(s => {
-            report += `  #${s.id} - ${formatCurrency(s.total)} (${s.paymentMethod})\n`;
-        });
-    } else if (type === 'branch') {
-        report = 'MLEA POS - BRANCH REPORT\n' + '='.repeat(40) + '\n\n';
-        allBranches.forEach(b => {
-            const bSales = allSales.filter(s => s.branchId === b.id && s.date.startsWith(thisMonth));
-            report += `${b.name}\n${'-'.repeat(20)}\n`;
-            report += `  Sales: ${formatCurrency(bSales.reduce((s, i) => s + i.total, 0))}\n`;
-            report += `  Transactions: ${bSales.length}\n`;
-            report += `  Users: ${DB.getAll('users').filter(u => u.branchId === b.id).length}\n`;
-            report += `  Products: ${DB.getAll('products').filter(p => p.branchId === b.id).length}\n\n`;
-        });
-    }
-    
-    downloadText(report, `${type}_report_${today}.txt`);
-}
-
-function exportBranchReport(type) {
-    const today = new Date().toISOString().split('T')[0];
-    const thisMonth = today.substring(0, 7);
-    const mySales = getMyData('sales');
-    const branch = DB.getById('branches', currentUser.branchId);
-    let report = '';
-    
-    report = `MLEA POS - ${branch?.name || 'Branch'} REPORT\n`;
-    report += '='.repeat(40) + '\n';
-    report += `Generated: ${new Date().toLocaleString()}\n`;
-    report += `Manager: ${currentUser.name}\n\n`;
-    
-    if (type === 'summary') {
-        const monthSales = mySales.filter(s => s.date.startsWith(thisMonth));
-        report += `MONTHLY SUMMARY (${thisMonth})\n${'-'.repeat(20)}\n`;
-        report += `Total Sales: ${formatCurrency(monthSales.reduce((s, i) => s + i.total, 0))}\n`;
-        report += `Transactions: ${monthSales.length}\n`;
-        report += `Avg Sale: ${formatCurrency(monthSales.length > 0 ? monthSales.reduce((s, i) => s + i.total, 0) / monthSales.length : 0)}\n`;
-        report += `Cash: ${formatCurrency(monthSales.filter(s => s.paymentMethod === 'cash').reduce((s, i) => s + i.total, 0))}\n`;
-        report += `Card: ${formatCurrency(monthSales.filter(s => s.paymentMethod === 'card').reduce((s, i) => s + i.total, 0))}\n`;
+            <div class="card"><h4>🏢 Branch Overview</h4>
+                ${allBranches.map(b => {
+                    const bSales = DB.getByBranch('sales', b.id).filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.total, 0);
+                    return `<div style="padding:8px 0;border-bottom:1px solid #2a3a5e;cursor:pointer;" onclick="switchView('branches')">
+                        <strong>🏢 ${b.name}</strong> <span style="float:right;color:#9b8fff;">${formatCurrency(bSales)}</span>
+                    </div>`;
+                }).join('')}
+            </div>`;
     } else {
-        report += `DETAILED REPORT\n${'-'.repeat(20)}\n\n`;
-        const recentSales = mySales.slice(-20).reverse();
-        recentSales.forEach(s => {
-            report += `#${s.id} | ${s.date} | ${formatCurrency(s.total)} | ${s.paymentMethod} | ${s.cashierName}\n`;
-        });
-        report += `\nPRODUCTS:\n`;
-        getMyData('products').forEach(p => {
-            report += `  ${p.name} - ${formatCurrency(p.price)} | Stock: ${p.stock}\n`;
-        });
+        el.innerHTML = `
+            <div class="metrics">
+                <div class="metric-card"><div class="metric-value">${formatCurrency(todaySales)}</div><div class="metric-label">Today</div></div>
+                <div class="metric-card"><div class="metric-value">${formatCurrency(monthSales)}</div><div class="metric-label">This Month</div></div>
+                <div class="metric-card"><div class="metric-value">${myProducts.length}</div><div class="metric-label">Products</div></div>
+                <div class="metric-card"><div class="metric-value">${lowStock}</div><div class="metric-label">Low Stock</div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <button class="btn btn-primary" onclick="switchView('pos')">🛒 POS</button>
+                <button class="btn btn-success" onclick="switchView('inventory')">📦 Products</button>
+                <button class="btn btn-warning" onclick="switchView('myUsers')">👥 Cashiers</button>
+                <button class="btn btn-primary" onclick="switchView('reports')">📊 Reports</button>
+            </div>
+            ${lowStock > 0 ? `<div class="alert alert-warning">⚠️ ${lowStock} products low on stock!</div>` : ''}`;
     }
-    
-    downloadText(report, `${branch?.name || 'branch'}_${type}_${today}.txt`);
 }
 
-function downloadText(text, filename) {
-    const blob = new Blob([text], { type: 'text/plain' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
+// ==================== POS ====================
+function renderPOS(el) {
+    const myProducts = getMyData('products').filter(p => p.active);
+    const subtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+    const total = subtotal + (subtotal * taxRate);
+    el.innerHTML = `
+        <input type="text" id="scanInput" placeholder="🔍 Scan barcode or search..." onkeypress="if(event.key==='Enter'){addToCart(event.target.value);event.target.value='';}">
+        <div class="product-grid">${myProducts.slice(0, 8).map(p => `
+            <div class="product-card" onclick="addToCart('${p.sku}')"><strong>${p.name}</strong><div style="color:#9b8fff;">${formatCurrency(p.price)}</div><small>Stock: ${p.stock}</small></div>
+        `).join('')}</div>
+        <div class="card" style="margin-top:10px;"><h4>🛒 Cart (${cart.length})</h4>
+            ${cart.map((item, i) => `<div class="cart-item"><span>${item.name} x${item.quantity}</span><span>${formatCurrency(item.price * item.quantity)}</span><button class="btn btn-danger btn-xs" onclick="removeFromCart(${i})">✕</button></div>`).join('') || '<p style="color:#a0a0b0;">Empty</p>'}
+            <hr style="border-color:#2a3a5e;"><div>Total: <strong style="color:#9b8fff;font-size:1.2em;">${formatCurrency(total)}</strong></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+                <button class="btn btn-success" onclick="processPayment('cash')">💵 Cash</button>
+                <button class="btn btn-primary" onclick="processPayment('card')">💳 Card</button>
+            </div></div>`;
+    setTimeout(() => { const si = document.getElementById('scanInput'); if (si) si.focus(); }, 100);
 }
 
-// Also update the exportCSV function to include more details:
+function addToCart(sku) {
+    const product = getMyData('products').find(p => (p.sku === sku || p.barcode === sku) && p.active);
+    if (product && product.stock > 0) {
+        const existing = cart.find(i => i.sku === product.sku);
+        if (existing) existing.quantity++; else cart.push({ ...product, quantity: 1 });
+        switchView('pos');
+    } else { alert('Product not found or out of stock!'); }
+}
+function removeFromCart(i) { cart.splice(i, 1); switchView('pos'); }
+
+function processPayment(method) {
+    if (cart.length === 0) { alert('Cart empty!'); return; }
+    const subtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+    const total = subtotal + (subtotal * taxRate);
+    const sale = {
+        date: new Date().toISOString().split('T')[0], total, subtotal, tax: subtotal * taxRate,
+        paymentMethod: method, cashierId: currentUser.id, cashierName: currentUser.name,
+        branchId: currentUser.branchId, currency: currentCurrency,
+        items: cart.map(i => ({ productId: i.id, name: i.name, quantity: i.quantity, price: i.price }))
+    };
+    const saleId = DB.add('sales', sale);
+    cart.forEach(item => {
+        const product = DB.getById('products', item.id);
+        if (product) { product.stock -= item.quantity; DB.update('products', product); }
+    });
+    logActivity('Sale', `#${saleId}: ${formatCurrency(total)} via ${method}`);
+    document.getElementById('modalContent').innerHTML = `<div style="text-align:center;"><h3>✅ Sale Complete!</h3><h2 style="color:#9b8fff;">${formatCurrency(total)}</h2><p>Receipt #${saleId}</p></div>`;
+    document.getElementById('modal').classList.add('active');
+    cart = []; discountRate = 0;
+    setTimeout(() => { document.getElementById('modal').classList.remove('active'); switchView('dashboard'); }, 2000);
+}
+
+// ==================== BRANCHES (ADMIN) ====================
+function renderBranches(el) {
+    if (currentUser.role !== 'admin') { el.innerHTML = '<p class="empty-state">🔒 Admin only</p>'; return; }
+    branches = DB.getAll('branches');
+    const thisMonth = new Date().toISOString().substring(0, 7);
+    el.innerHTML = `
+        <h4>🏢 Branch Management</h4>
+        <button class="btn btn-primary btn-block" onclick="showAddBranch()">+ Add New Branch</button>
+        ${branches.map(b => {
+            const bUsers = DB.getByBranch('users', b.id);
+            const bProducts = DB.getByBranch('products', b.id);
+            const bSales = DB.getByBranch('sales', b.id).filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.total, 0);
+            return `<div class="card">
+                <h4>🏢 ${b.name} <span style="font-size:.7em;color:#a0a0b0;">ID:${b.id}</span></h4>
+                <p style="color:#a0a0b0;font-size:.8em;">📍 ${b.address || 'No address'} | 📞 ${b.phone || 'No phone'}</p>
+                <div class="metrics">
+                    <div class="metric-card"><div class="metric-value">${bUsers.length}</div><div class="metric-label">Users</div></div>
+                    <div class="metric-card"><div class="metric-value">${bProducts.length}</div><div class="metric-label">Products</div></div>
+                    <div class="metric-card"><div class="metric-value">${formatCurrency(bSales)}</div><div class="metric-label">Month Sales</div></div>
+                </div>
+                <button class="btn btn-success btn-sm" onclick="showAddBranchUser(${b.id})">+ Add User</button>
+                <button class="btn btn-warning btn-sm" onclick="editBranch(${b.id})">✎ Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteBranch(${b.id})">🗑️</button>
+            </div>`;
+        }).join('')}`;
+}
+
+function showAddBranch() {
+    document.getElementById('modalContent').innerHTML = `
+        <h4>Add New Branch</h4>
+        <input type="text" id="bName" placeholder="Branch Name *">
+        <input type="text" id="bAddress" placeholder="Address">
+        <input type="tel" id="bPhone" placeholder="Phone">
+        <button class="btn btn-primary" onclick="addBranch()">💾 Create Branch</button>
+        <button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;
+    document.getElementById('modal').classList.add('active');
+}
+
+function addBranch() {
+    const name = document.getElementById('bName').value;
+    if (!name) { alert('Branch name required!'); return; }
+    const branchId = DB.add('branches', { name, address: document.getElementById('bAddress').value, phone: document.getElementById('bPhone').value });
+    branches = DB.getAll('branches'); closeModal();
+    if (confirm(`Branch "${name}" created! Add a manager now?`)) { showAddBranchUser(branchId); }
+    else { switchView('branches'); }
+}
+
+function showAddBranchUser(branchId) {
+    const branch = DB.getById('branches', branchId);
+    document.getElementById('modalContent').innerHTML = `
+        <h4>Add User to ${branch?.name || 'Branch'}</h4>
+        <input type="text" id="uName" placeholder="Name *">
+        <select id="uRole"><option value="manager">Manager</option><option value="cashier">Cashier</option></select>
+        <input type="password" id="uPin" placeholder="4-digit PIN *" maxlength="4">
+        <button class="btn btn-primary" onclick="addBranchUser(${branchId})">💾 Save</button>
+        <button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;
+    document.getElementById('modal').classList.add('active');
+}
+
+function addBranchUser(branchId) {
+    const name = document.getElementById('uName').value;
+    const pin = document.getElementById('uPin').value;
+    const role = document.getElementById('uRole').value;
+    if (!name || pin.length !== 4) { alert('Name and 4-digit PIN required!'); return; }
+    DB.add('users', { name, role, active: true, pin, branchId });
+    users = DB.getAll('users'); closeModal(); switchView('branches'); renderLoginScreen();
+    logActivity('Added User', `${name} (${role}) to branch`);
+}
+
+function editBranch(id) {
+    const b = DB.getById('branches', id);
+    document.getElementById('modalContent').innerHTML = `
+        <h4>Edit Branch</h4>
+        <input type="text" id="bName" value="${b.name}">
+        <input type="text" id="bAddress" value="${b.address || ''}">
+        <input type="tel" id="bPhone" value="${b.phone || ''}">
+        <button class="btn btn-primary" onclick="saveBranch(${id})">💾 Save</button>
+        <button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;
+    document.getElementById('modal').classList.add('active');
+}
+
+function saveBranch(id) {
+    const b = DB.getById('branches', id);
+    b.name = document.getElementById('bName').value;
+    b.address = document.getElementById('bAddress').value;
+    b.phone = document.getElementById('bPhone').value;
+    DB.update('branches', b); branches = DB.getAll('branches');
+    closeModal(); switchView('branches');
+}
+
+function deleteBranch(id) {
+    const bUsers = DB.getByBranch('users', id);
+    if (bUsers.length > 0) { alert(`Cannot delete branch with ${bUsers.length} users.`); return; }
+    if (confirm('Delete this branch?')) { DB.delete('branches', id); branches = DB.getAll('branches'); switchView('branches'); }
+}
+
+// ==================== INVENTORY ====================
+function renderInventory(el) {
+    const myProducts = getMyData('products');
+    el.innerHTML = `
+        <h4>📦 My Products</h4>
+        <button class="btn btn-primary btn-block" onclick="showAddProduct()">+ Add Product</button>
+        <div style="overflow-x:auto;"><table><thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Act</th></tr></thead>
+        <tbody>${myProducts.map(p => `<tr><td>${p.name}</td><td>${formatCurrency(p.price)}</td><td class="${p.stock < 10 ? 'stock-low' : ''}">${p.stock}</td>
+        <td><button class="btn btn-success btn-xs" onclick="adjustStock(${p.id})">+</button></td></tr>`).join('')}</tbody></table></div>
+        ${myProducts.length === 0 ? '<p class="empty-state">No products yet</p>' : ''}`;
+}
+
+function renderAllProducts(el) {
+    const all = DB.getAll('products');
+    el.innerHTML = `<h4>📦 All Products</h4>
+        <table><thead><tr><th>Name</th><th>Price</th><th>Stock</th><th>Branch</th></tr></thead>
+        <tbody>${all.map(p => { const b = p.branchId ? DB.getById('branches', p.branchId) : null; return `<tr><td>${p.name}</td><td>${formatCurrency(p.price)}</td><td>${p.stock}</td><td>${b?.name || 'Global'}</td></tr>`; }).join('')}</tbody></table>`;
+}
+
+function showAddProduct() {
+    document.getElementById('modalContent').innerHTML = `
+        <h4>Add Product</h4>
+        <input type="text" id="pName" placeholder="Name *">
+        <input type="number" id="pPrice" placeholder="Price *" step="0.01">
+        <input type="number" id="pStock" placeholder="Stock" value="0">
+        <input type="text" id="pSku" placeholder="SKU (auto if empty)">
+        <button class="btn btn-primary" onclick="addProduct()">💾 Save</button>
+        <button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;
+    document.getElementById('modal').classList.add('active');
+}
+
+function addProduct() {
+    const name = document.getElementById('pName').value;
+    const price = parseFloat(document.getElementById('pPrice').value);
+    if (!name || !price) { alert('Name and price required!'); return; }
+    DB.add('products', { sku: document.getElementById('pSku').value || ('SKU' + Date.now()), name, price, stock: parseInt(document.getElementById('pStock').value) || 0, category: 'General', active: true, barcode: '', branchId: currentUser.branchId });
+    logActivity('Added Product', `${name} at ${formatCurrency(price)}`);
+    closeModal(); switchView('inventory');
+}
+
+function adjustStock(id) {
+    const p = DB.getById('products', id);
+    document.getElementById('modalContent').innerHTML = `
+        <h4>Adjust Stock: ${p.name}</h4><p style="color:#a0a0b0;">Current: ${p.stock}</p>
+        <input type="number" id="newStock" value="${p.stock}">
+        <select id="adjReason"><option>Restock</option><option>Damage</option><option>Correction</option></select>
+        <button class="btn btn-primary" onclick="saveAdjust(${id})">💾 Save</button>
+        <button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;
+    document.getElementById('modal').classList.add('active');
+}
+
+function saveAdjust(id) {
+    const p = DB.getById('products', id);
+    const old = p.stock;
+    p.stock = parseInt(document.getElementById('newStock').value);
+    DB.update('products', p);
+    DB.add('inventoryLogs', { productId: id, oldStock: old, newStock: p.stock, reason: document.getElementById('adjReason').value, userName: currentUser.name, branchId: currentUser.branchId });
+    logActivity('Stock Adjust', `${p.name}: ${old}→${p.stock}`);
+    closeModal(); switchView('inventory');
+}
+
+// ==================== USERS ====================
+function renderMyUsers(el) {
+    const myUsers = getMyData('users').filter(u => u.role === 'cashier');
+    el.innerHTML = `
+        <h4>👥 My Cashiers</h4>
+        <button class="btn btn-primary btn-block" onclick="showAddBranchUser(${currentUser.branchId})">+ Add Cashier</button>
+        ${myUsers.map(u => `<div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+            <div><strong>${u.name}</strong> <span class="role-badge cashier-badge">cashier</span> ${u.active ? '✅' : '❌'}</div>
+            <div><button class="btn btn-warning btn-xs" onclick="toggleBranchUser(${u.id})">${u.active ? 'Deact' : 'Act'}</button>
+            <button class="btn btn-danger btn-xs" onclick="deleteBranchUser(${u.id})">🗑️</button></div>
+        </div>`).join('')}
+        ${myUsers.length === 0 ? '<p class="empty-state">No cashiers yet</p>' : ''}`;
+}
+
+function renderAllUsers(el) {
+    const all = DB.getAll('users');
+    el.innerHTML = `<h4>👥 All Users</h4>
+        ${all.map(u => { const b = u.branchId ? DB.getById('branches', u.branchId) : null;
+            return `<div class="card"><strong>${u.name}</strong> <span class="role-badge ${u.role}-badge">${u.role}</span> ${u.active ? '✅' : '❌'} <span style="font-size:.7em;color:#a0a0b0;">${b ? '🏢 ' + b.name : '👑 Admin'}</span></div>`; }).join('')}`;
+}
+
+function toggleBranchUser(id) {
+    const u = DB.getById('users', id);
+    if (u.branchId !== currentUser.branchId) { alert('Not your branch user!'); return; }
+    u.active = !u.active; DB.update('users', u); users = DB.getAll('users');
+    logActivity(u.active ? 'Activated' : 'Deactivated', u.name);
+    switchView('myUsers'); renderLoginScreen();
+}
+
+function deleteBranchUser(id) {
+    const u = DB.getById('users', id);
+    if (u.branchId !== currentUser.branchId) { alert('Not your branch user!'); return; }
+    if (confirm(`Delete ${u.name}?`)) { DB.delete('users', id); users = DB.getAll('users'); logActivity('Deleted User', u.name); switchView('myUsers'); renderLoginScreen(); }
+}
+
+// ==================== ACTIVITY & SALES ====================
+function renderMyActivity(el) {
+    const logs = DB.getAll('activityLogs').filter(l => l.branchId === currentUser.branchId).slice(-50).reverse();
+    el.innerHTML = `<h4>📋 Activity Log</h4>
+        ${logs.map(l => `<div style="padding:6px 0;border-bottom:1px solid #2a3a5e;font-size:.8em;"><span style="color:#7c6fff;">${new Date(l.timestamp).toLocaleString()}</span><br><strong>${l.userName}</strong>: ${l.action} - ${l.details}</div>`).join('')}
+        ${logs.length === 0 ? '<p class="empty-state">No activity yet</p>' : ''}`;
+}
+
+function renderBranchSales(el) {
+    const sales = getMyData('sales').slice(-30).reverse();
+    el.innerHTML = `<h4>💰 Branch Sales</h4>
+        ${sales.map(s => `<div class="card"><div style="display:flex;justify-content:space-between;"><span>#${s.id} ${s.date}</span><span style="color:#9b8fff;font-weight:bold;">${formatCurrency(s.total)}</span></div><p style="color:#a0a0b0;font-size:.75em;">${s.paymentMethod} | ${s.cashierName}</p></div>`).join('')}
+        ${sales.length === 0 ? '<p class="empty-state">No sales yet</p>' : ''}`;
+}
+
+function renderAllSales(el) {
+    const all = DB.getAll('sales').slice(-30).reverse();
+    el.innerHTML = `<h4>💰 All Sales</h4>
+        ${all.map(s => `<div class="card"><strong>#${s.id}</strong> ${formatCurrency(s.total)} <span style="font-size:.7em;color:#a0a0b0;">${s.date} | ${s.paymentMethod}</span></div>`).join('')}`;
+}
+
+// ==================== BRANCH BACKUP ====================
+function renderBranchBackup(el) {
+    el.innerHTML = `
+        <h4>💾 Branch Database</h4>
+        <p style="color:#a0a0b0;font-size:.8em;">Backup or restore your branch data independently.</p>
+        <button class="btn btn-primary btn-block" onclick="backupBranchData()">📥 Download Backup</button>
+        <button class="btn btn-warning btn-block" onclick="restoreBranchData()">📤 Restore Backup</button>
+        <div class="alert alert-danger" style="margin-top:15px;"><strong>⚠️ Danger Zone</strong></div>
+        <button class="btn btn-danger btn-block" onclick="clearBranchData()">🗑️ Clear Branch Data</button>`;
+}
+
+function backupBranchData() {
+    const data = {};
+    ['products', 'sales', 'users', 'activityLogs'].forEach(s => { data[s] = DB.getByBranch(s, currentUser.branchId); });
+    const branch = DB.getById('branches', currentUser.branchId);
+    data.branch = branch;
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `${branch?.name || 'branch'}_backup_${new Date().toISOString().split('T')[0]}.json`; a.click();
+    logActivity('Backup', 'Downloaded branch backup');
+    alert('✅ Backup downloaded!');
+}
+
+function restoreBranchData() {
+    document.getElementById('modalContent').innerHTML = `
+        <h4>📤 Restore Branch Data</h4>
+        <div class="alert alert-warning">⚠️ This REPLACES current branch data!</div>
+        <input type="file" id="backupFile" accept=".json">
+        <button class="btn btn-primary" onclick="performBranchRestore()">🔄 Restore</button>
+        <button class="btn btn-danger" onclick="closeModal()">Cancel</button>`;
+    document.getElementById('modal').classList.add('active');
+}
+
+function performBranchRestore() {
+    const file = document.getElementById('backupFile').files[0];
+    if (!file) { alert('Select a file!'); return; }
+    if (!confirm('Replace all branch data?')) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        const data = JSON.parse(ev.target.result);
+        ['products', 'sales', 'users', 'activityLogs'].forEach(s => {
+            const all = DB.getAll(s).filter(i => i.branchId !== currentUser.branchId);
+            const restored = (data[s] || []).map(i => { i.branchId = currentUser.branchId; return i; });
+            DB.set(s, [...all, ...restored]);
+        });
+        alert('✅ Restored! Reloading...'); closeModal(); location.reload();
+    };
+    reader.readAsText(file);
+}
+
+function clearBranchData() {
+    if (!confirm('⚠️ DELETE all branch data?')) return;
+    if (!confirm('FINAL: All products, sales, users for this branch will be deleted!')) return;
+    ['products', 'sales', 'users', 'activityLogs'].forEach(s => {
+        DB.set(s, DB.getAll(s).filter(i => i.branchId !== currentUser.branchId));
+    });
+    logActivity('Clear Data', 'Cleared all branch data');
+    alert('🗑️ Branch data cleared!'); switchView('dashboard');
+}
+
+// ==================== SETTINGS ====================
+function renderSettings(el) {
+    el.innerHTML = `
+        <div class="card"><h4>💱 Currency</h4><select id="currencySelect" onchange="changeCurrency(this.value)">${Object.entries(currencies).map(([code, c]) => `<option value="${code}" ${currentCurrency === code ? 'selected' : ''}>${c.flag} ${c.name}</option>`).join('')}</select></div>
+        <div class="card"><h4>💰 Tax Rate (%)</h4><input type="number" id="taxInput" value="${taxRate * 100}" step="0.1"><button class="btn btn-primary btn-sm" onclick="saveTax()">Save Tax</button></div>
+        <div class="card"><h4>📄 Business Info</h4><input type="text" id="bizName" value="${businessName}" placeholder="Business Name"><input type="text" id="bizAddress" value="${businessAddress}" placeholder="Address"><input type="text" id="footerInput" value="${receiptFooter}" placeholder="Receipt Footer"><button class="btn btn-primary btn-sm" onclick="saveBizInfo()">Save</button></div>`;
+}
+
+function changeCurrency(code) { currentCurrency = code; saveSetting('currency', code); switchView('settings'); }
+function saveTax() { const v = parseFloat(document.getElementById('taxInput').value); if (v >= 0 && v <= 30) { taxRate = v / 100; saveSetting('taxRate', taxRate.toString()); alert('Saved!'); } }
+function saveBizInfo() { businessName = document.getElementById('bizName').value; businessAddress = document.getElementById('bizAddress').value; receiptFooter = document.getElementById('footerInput').value; saveSetting('businessName', businessName); saveSetting('businessAddress', businessAddress); saveSetting('receiptFooter', receiptFooter); alert('Saved!'); }
+
+// ==================== REPORTS ====================
+function renderReports(el) {
+    el.innerHTML = `
+        <button class="btn btn-primary btn-block" onclick="exportCSV('sales')">📊 Sales CSV</button>
+        <button class="btn btn-success btn-block" onclick="exportCSV('inventory')">📦 Inventory CSV</button>
+        <button class="btn btn-primary btn-block" onclick="backupAllData()">💾 Full Backup</button>
+        <button class="btn btn-warning btn-block" onclick="window.print()">🖨️ Print</button>`;
+}
+
 function exportCSV(type) {
     let csv = '';
-    const today = new Date().toISOString().split('T')[0];
-    
-    if (type === 'sales') {
-        csv = 'Sale ID,Date,Total,Subtotal,Tax,Payment Method,Cashier,Branch\n';
-        getMyData('sales').forEach(s => {
-            const branch = s.branchId ? DB.getById('branches', s.branchId) : null;
-            csv += `${s.id},${s.date},${s.total},${s.subtotal || 0},${s.tax || 0},${s.paymentMethod},${s.cashierName || ''},${branch?.name || 'N/A'}\n`;
-        });
-    } else if (type === 'inventory') {
-        csv = 'SKU,Name,Price,Stock,Category,Active,Branch\n';
-        getMyData('products').forEach(p => {
-            const branch = p.branchId ? DB.getById('branches', p.branchId) : null;
-            csv += `${p.sku},${p.name},${p.price},${p.stock},${p.category || ''},${p.active},${branch?.name || 'Global'}\n`;
-        });
-    }
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `${type}_report_${today}.csv`;
-    a.click();
+    if (type === 'sales') { csv = 'Date,Total,Payment,Cashier\n'; getMyData('sales').forEach(s => csv += `${s.date},${s.total},${s.paymentMethod},${s.cashierName || ''}\n`); }
+    else { csv = 'Name,Price,Stock\n'; getMyData('products').forEach(p => csv += `${p.name},${p.price},${p.stock}\n`); }
+    const b = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a');
+    a.href = URL.createObjectURL(b); a.download = `${type}_${new Date().toISOString().split('T')[0]}.csv`; a.click();
 }
 
-    function backupAllData() {
-        const data = {}; DB.stores.forEach(s => data[s] = DB.getAll(s));
-        const b = new Blob([JSON.stringify(data)], { type: 'application/json' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(b);
-        a.download = `full_backup_${new Date().toISOString().split('T')[0]}.json`; a.click();
-        alert('✅ Full backup downloaded!');
+function backupAllData() {
+    const data = {}; DB.stores.forEach(s => data[s] = DB.getAll(s));
+    const b = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+    a.download = `full_backup_${new Date().toISOString().split('T')[0]}.json`; a.click();
+    alert('✅ Full backup downloaded!');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('active'); }
+
+// ==================== EVENTS ====================
+document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+document.addEventListener('keydown', function(e) {
+    if (document.getElementById('loginScreen').style.display !== 'none') {
+        if (e.key >= '0' && e.key <= '9') enterPin(e.key);
+        else if (e.key === 'Enter') submitPin();
+        else if (e.key === 'Backspace') { pinEntry = pinEntry.slice(0, -1); updatePinDisplay(); }
     }
+});
 
-    function closeModal() { document.getElementById('modal').classList.remove('active'); }
-
-    // ==================== EVENTS ====================
-    document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
-    document.addEventListener('keydown', function(e) {
-        if (document.getElementById('loginScreen').style.display !== 'none') {
-            if (e.key >= '0' && e.key <= '9') enterPin(e.key);
-            else if (e.key === 'Enter') submitPin();
-            else if (e.key === 'Backspace') { pinEntry = pinEntry.slice(0, -1); updatePinDisplay(); }
-        }
-    });
-
-    // ==================== START ====================
-    console.log('Starting MLEA POS...');
-    initApp();
-    </script>
+// ==================== START ====================
+console.log('🚀 Starting MLEA POS v2.0...');
+console.log('👤 Default login: Admin / PIN: 1234');
+initApp();
+</script>
 </body>
 </html>
