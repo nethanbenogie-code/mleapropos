@@ -726,21 +726,420 @@
     function saveTax() { const v = parseFloat(document.getElementById('taxInput').value); if (v >= 0 && v <= 30) { taxRate = v / 100; saveSetting('taxRate', taxRate.toString()); alert('Saved!'); } }
     function saveBizInfo() { businessName = document.getElementById('bizName').value; businessAddress = document.getElementById('bizAddress').value; receiptFooter = document.getElementById('footerInput').value; saveSetting('businessName', businessName); saveSetting('businessAddress', businessAddress); saveSetting('receiptFooter', receiptFooter); alert('Saved!'); }
 
-    function renderReports(el) {
-        el.innerHTML = `
-            <button class="btn btn-primary btn-block" onclick="exportCSV('sales')">📊 Sales CSV</button>
-            <button class="btn btn-success btn-block" onclick="exportCSV('inventory')">📦 Inventory CSV</button>
-            <button class="btn btn-primary btn-block" onclick="backupAllData()">💾 Full Backup</button>
-            <button class="btn btn-warning btn-block" onclick="window.print()">🖨️ Print</button>`;
-    }
+    // ==================== ENHANCED REPORTS SYSTEM ====================
 
-    function exportCSV(type) {
-        let csv = '';
-        if (type === 'sales') { csv = 'Date,Total,Payment\n'; getMyData('sales').forEach(s => csv += `${s.date},${s.total},${s.paymentMethod}\n`); }
-        else { csv = 'Name,Price,Stock\n'; getMyData('products').forEach(p => csv += `${p.name},${p.price},${p.stock}\n`); }
-        const b = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a');
-        a.href = URL.createObjectURL(b); a.download = `${type}_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+// Replace the existing renderReports function with this:
+function renderReports(el) {
+    const today = new Date().toISOString().split('T')[0];
+    const thisMonth = today.substring(0, 7);
+    const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().substring(0, 7);
+    
+    if (currentUser.role === 'admin') {
+        renderAdminReports(el, today, thisMonth, lastMonth);
+    } else {
+        renderBranchReports(el, today, thisMonth, lastMonth);
     }
+}
+
+// ==================== ADMIN REPORTS ====================
+function renderAdminReports(el, today, thisMonth, lastMonth) {
+    const allSales = DB.getAll('sales');
+    const allBranches = DB.getAll('branches');
+    const allProducts = DB.getAll('products');
+    const allUsers = DB.getAll('users');
+    
+    // Calculate totals
+    const todaySales = allSales.filter(s => s.date === today).reduce((s, i) => s + i.total, 0);
+    const monthSales = allSales.filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.total, 0);
+    const lastMonthSales = allSales.filter(s => s.date.startsWith(lastMonth)).reduce((s, i) => s + i.total, 0);
+    const monthTax = allSales.filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.tax, 0);
+    
+    // Payment method breakdown
+    const cashSales = allSales.filter(s => s.date.startsWith(thisMonth) && s.paymentMethod === 'cash').reduce((s, i) => s + i.total, 0);
+    const cardSales = allSales.filter(s => s.date.startsWith(thisMonth) && s.paymentMethod === 'card').reduce((s, i) => s + i.total, 0);
+    
+    // Branch performance
+    const branchPerformance = allBranches.map(b => {
+        const bSales = allSales.filter(s => s.branchId === b.id && s.date.startsWith(thisMonth));
+        const bTotal = bSales.reduce((s, i) => s + i.total, 0);
+        const bCount = bSales.length;
+        const bUsers = allUsers.filter(u => u.branchId === b.id).length;
+        const bProducts = allProducts.filter(p => p.branchId === b.id).length;
+        return { ...b, total: bTotal, count: bCount, users: bUsers, products: bProducts };
+    }).sort((a, b) => b.total - a.total);
+    
+    // Top products
+    const productSales = {};
+    allSales.filter(s => s.date.startsWith(thisMonth)).forEach(s => {
+        if (s.items) {
+            s.items.forEach(item => {
+                if (!productSales[item.name]) productSales[item.name] = { name: item.name, quantity: 0, total: 0 };
+                productSales[item.name].quantity += item.quantity;
+                productSales[item.name].total += item.price * item.quantity;
+            });
+        }
+    });
+    const topProducts = Object.values(productSales).sort((a, b) => b.total - a.total).slice(0, 5);
+    
+    el.innerHTML = `
+        <!-- Summary Cards -->
+        <div class="metrics">
+            <div class="metric-card"><div class="metric-value">${formatCurrency(todaySales)}</div><div class="metric-label">Today</div></div>
+            <div class="metric-card"><div class="metric-value">${formatCurrency(monthSales)}</div><div class="metric-label">This Month</div></div>
+            <div class="metric-card"><div class="metric-value">${formatCurrency(monthTax)}</div><div class="metric-label">Tax Collected</div></div>
+            <div class="metric-card"><div class="metric-value">${allSales.filter(s => s.date.startsWith(thisMonth)).length}</div><div class="metric-label">Transactions</div></div>
+        </div>
+
+        <!-- Month-over-Month Comparison -->
+        <div class="card">
+            <h4>📈 Month Comparison</h4>
+            <div style="display:flex;justify-content:space-between;text-align:center;">
+                <div><div style="color:#a0a0b0;font-size:.7em;">Last Month</div><div style="color:#9b8fff;">${formatCurrency(lastMonthSales)}</div></div>
+                <div style="font-size:1.5em;">→</div>
+                <div><div style="color:#a0a0b0;font-size:.7em;">This Month</div><div style="color:#2ed573;">${formatCurrency(monthSales)}</div></div>
+            </div>
+            ${lastMonthSales > 0 ? `
+                <div style="margin-top:8px;text-align:center;">
+                    <span style="color:${monthSales >= lastMonthSales ? '#2ed573' : '#ff4757'};font-size:.9em;">
+                        ${monthSales >= lastMonthSales ? '📈' : '📉'} ${Math.abs(((monthSales - lastMonthSales) / lastMonthSales * 100)).toFixed(1)}% ${monthSales >= lastMonthSales ? 'increase' : 'decrease'}
+                    </span>
+                </div>` : ''}
+        </div>
+
+        <!-- Payment Method Breakdown -->
+        <div class="card">
+            <h4>💳 Payment Methods (This Month)</h4>
+            <div style="display:flex;gap:10px;">
+                <div style="flex:1;text-align:center;background:#16213e;border-radius:8px;padding:10px;">
+                    <div style="font-size:1.5em;">💵</div>
+                    <div style="color:#9b8fff;">${formatCurrency(cashSales)}</div>
+                    <div style="font-size:.7em;color:#a0a0b0;">Cash (${monthSales > 0 ? ((cashSales / monthSales) * 100).toFixed(0) : 0}%)</div>
+                </div>
+                <div style="flex:1;text-align:center;background:#16213e;border-radius:8px;padding:10px;">
+                    <div style="font-size:1.5em;">💳</div>
+                    <div style="color:#9b8fff;">${formatCurrency(cardSales)}</div>
+                    <div style="font-size:.7em;color:#a0a0b0;">Card (${monthSales > 0 ? ((cardSales / monthSales) * 100).toFixed(0) : 0}%)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Branch Performance -->
+        <div class="card">
+            <h4>🏢 Branch Performance</h4>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>Branch</th><th>Sales</th><th>Trans</th><th>Users</th></tr></thead>
+                    <tbody>
+                        ${branchPerformance.map((b, i) => `
+                            <tr>
+                                <td>${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : ''} ${b.name}</td>
+                                <td style="color:#9b8fff;">${formatCurrency(b.total)}</td>
+                                <td>${b.count}</td>
+                                <td>${b.users}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Top Products -->
+        ${topProducts.length > 0 ? `
+        <div class="card">
+            <h4>🔥 Top Products</h4>
+            ${topProducts.map((p, i) => `
+                <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #2a3a5e;">
+                    <span>${i + 1}. ${p.name}</span>
+                    <span style="color:#a0a0b0;">x${p.quantity}</span>
+                    <span style="color:#9b8fff;">${formatCurrency(p.total)}</span>
+                </div>
+            `).join('')}
+        </div>` : ''}
+
+        <!-- Export Buttons -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+            <button class="btn btn-primary btn-sm" onclick="exportFullReport('monthly')">📊 Monthly Report</button>
+            <button class="btn btn-success btn-sm" onclick="exportFullReport('daily')">📋 Daily Report</button>
+            <button class="btn btn-primary btn-sm" onclick="exportCSV('sales')">💰 Sales CSV</button>
+            <button class="btn btn-warning btn-sm" onclick="exportFullReport('branch')">🏢 Branch Report</button>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="backupAllData()">💾 Full Backup</button>
+    `;
+}
+
+// ==================== BRANCH MANAGER REPORTS ====================
+function renderBranchReports(el, today, thisMonth, lastMonth) {
+    const mySales = getMyData('sales');
+    const myProducts = getMyData('products');
+    const myUsers = getMyData('users');
+    
+    // Calculate totals
+    const todaySales = mySales.filter(s => s.date === today).reduce((s, i) => s + i.total, 0);
+    const todayCount = mySales.filter(s => s.date === today).length;
+    const monthSales = mySales.filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.total, 0);
+    const monthCount = mySales.filter(s => s.date.startsWith(thisMonth)).length;
+    const lastMonthSales = mySales.filter(s => s.date.startsWith(lastMonth)).reduce((s, i) => s + i.total, 0);
+    const monthTax = mySales.filter(s => s.date.startsWith(thisMonth)).reduce((s, i) => s + i.tax, 0);
+    const monthAvg = monthCount > 0 ? monthSales / monthCount : 0;
+    
+    // Payment breakdown
+    const cashSales = mySales.filter(s => s.date.startsWith(thisMonth) && s.paymentMethod === 'cash').reduce((s, i) => s + i.total, 0);
+    const cardSales = mySales.filter(s => s.date.startsWith(thisMonth) && s.paymentMethod === 'card').reduce((s, i) => s + i.total, 0);
+    
+    // Cashier performance
+    const cashierPerformance = myUsers.filter(u => u.role === 'cashier' && u.active).map(c => {
+        const cSales = mySales.filter(s => s.cashierId === c.id && s.date.startsWith(thisMonth));
+        return {
+            name: c.name,
+            total: cSales.reduce((s, i) => s + i.total, 0),
+            count: cSales.length,
+            avg: cSales.length > 0 ? cSales.reduce((s, i) => s + i.total, 0) / cSales.length : 0
+        };
+    }).sort((a, b) => b.total - a.total);
+    
+    // Daily breakdown (last 7 days)
+    const dailyBreakdown = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const daySales = mySales.filter(s => s.date === dateStr).reduce((s, sale) => s + sale.total, 0);
+        dailyBreakdown.push({ date: dateStr, total: daySales, label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) });
+    }
+    
+    // Low stock alert
+    const lowStock = myProducts.filter(p => p.active && p.stock < 10);
+    
+    // Best selling products
+    const productSalesMap = {};
+    mySales.filter(s => s.date.startsWith(thisMonth)).forEach(s => {
+        if (s.items) {
+            s.items.forEach(item => {
+                if (!productSalesMap[item.name]) productSalesMap[item.name] = { name: item.name, qty: 0, total: 0 };
+                productSalesMap[item.name].qty += item.quantity;
+                productSalesMap[item.name].total += item.price * item.quantity;
+            });
+        }
+    });
+    const bestProducts = Object.values(productSalesMap).sort((a, b) => b.total - a.total).slice(0, 5);
+    
+    el.innerHTML = `
+        <!-- Summary -->
+        <div class="metrics">
+            <div class="metric-card"><div class="metric-value">${formatCurrency(todaySales)}</div><div class="metric-label">Today (${todayCount} sales)</div></div>
+            <div class="metric-card"><div class="metric-value">${formatCurrency(monthSales)}</div><div class="metric-label">This Month (${monthCount} sales)</div></div>
+            <div class="metric-card"><div class="metric-value">${formatCurrency(monthAvg)}</div><div class="metric-label">Avg Sale</div></div>
+            <div class="metric-card"><div class="metric-value">${formatCurrency(monthTax)}</div><div class="metric-label">Tax Collected</div></div>
+        </div>
+
+        <!-- Month Comparison -->
+        <div class="card">
+            <h4>📈 Month Comparison</h4>
+            <div style="display:flex;justify-content:space-between;text-align:center;">
+                <div><small style="color:#a0a0b0;">Last Month</small><br><span style="color:#9b8fff;">${formatCurrency(lastMonthSales)}</span></div>
+                <div style="font-size:1.5em;">→</div>
+                <div><small style="color:#a0a0b0;">This Month</small><br><span style="color:#2ed573;">${formatCurrency(monthSales)}</span></div>
+            </div>
+            ${lastMonthSales > 0 ? `
+                <div style="text-align:center;margin-top:5px;color:${monthSales >= lastMonthSales ? '#2ed573' : '#ff4757'};">
+                    ${monthSales >= lastMonthSales ? '📈' : '📉'} ${Math.abs(((monthSales - lastMonthSales) / lastMonthSales * 100)).toFixed(1)}%
+                </div>` : ''}
+        </div>
+
+        <!-- Daily Breakdown Chart -->
+        <div class="card">
+            <h4>📊 Last 7 Days</h4>
+            ${dailyBreakdown.map(d => {
+                const maxSales = Math.max(...dailyBreakdown.map(x => x.total), 1);
+                const barWidth = (d.total / maxSales * 100);
+                return `
+                <div style="margin:5px 0;">
+                    <div style="display:flex;justify-content:space-between;font-size:.7em;">
+                        <span>${d.label.split(',')[0]}</span>
+                        <span>${formatCurrency(d.total)}</span>
+                    </div>
+                    <div style="background:#2a3a5e;border-radius:5px;height:8px;">
+                        <div style="background:${d.total > 0 ? '#7c6fff' : '#2a3a5e'};height:100%;border-radius:5px;width:${barWidth}%;"></div>
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>
+
+        <!-- Payment Methods -->
+        <div class="card">
+            <h4>💳 Payment Methods</h4>
+            <div style="display:flex;gap:8px;">
+                <div style="flex:1;text-align:center;background:#16213e;border-radius:8px;padding:8px;">
+                    <div>💵</div><div style="color:#9b8fff;">${formatCurrency(cashSales)}</div>
+                    <small style="color:#a0a0b0;">Cash</small>
+                </div>
+                <div style="flex:1;text-align:center;background:#16213e;border-radius:8px;padding:8px;">
+                    <div>💳</div><div style="color:#9b8fff;">${formatCurrency(cardSales)}</div>
+                    <small style="color:#a0a0b0;">Card</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cashier Performance -->
+        ${cashierPerformance.length > 0 ? `
+        <div class="card">
+            <h4>👤 Cashier Performance</h4>
+            <table>
+                <thead><tr><th>Cashier</th><th>Sales</th><th>Count</th><th>Avg</th></tr></thead>
+                <tbody>${cashierPerformance.map((c, i) => `
+                    <tr>
+                        <td>${i === 0 ? '⭐' : ''} ${c.name}</td>
+                        <td style="color:#9b8fff;">${formatCurrency(c.total)}</td>
+                        <td>${c.count}</td>
+                        <td>${formatCurrency(c.avg)}</td>
+                    </tr>`).join('')}</tbody>
+            </table>
+        </div>` : ''}
+
+        <!-- Top Products -->
+        ${bestProducts.length > 0 ? `
+        <div class="card">
+            <h4>🔥 Best Sellers</h4>
+            ${bestProducts.map((p, i) => `
+                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #2a3a5e;font-size:.85em;">
+                    <span>${i + 1}. ${p.name}</span>
+                    <span style="color:#a0a0b0;">x${p.qty}</span>
+                    <span style="color:#9b8fff;">${formatCurrency(p.total)}</span>
+                </div>`).join('')}
+        </div>` : ''}
+
+        <!-- Low Stock Alert -->
+        ${lowStock.length > 0 ? `
+        <div class="alert alert-warning">
+            ⚠️ <strong>${lowStock.length} products low on stock:</strong><br>
+            ${lowStock.map(p => `${p.name} (${p.stock} left)`).join(', ')}
+        </div>` : ''}
+
+        <!-- Export -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+            <button class="btn btn-primary btn-sm" onclick="exportBranchReport('summary')">📊 Summary Report</button>
+            <button class="btn btn-success btn-sm" onclick="exportBranchReport('detailed')">📋 Detailed Report</button>
+            <button class="btn btn-primary btn-sm" onclick="exportCSV('sales')">💰 Sales CSV</button>
+            <button class="btn btn-warning btn-sm" onclick="window.print()">🖨️ Print</button>
+        </div>
+    `;
+}
+
+// ==================== EXPORT FUNCTIONS ====================
+function exportFullReport(type) {
+    const today = new Date().toISOString().split('T')[0];
+    const thisMonth = today.substring(0, 7);
+    const allSales = DB.getAll('sales');
+    const allBranches = DB.getAll('branches');
+    let report = '';
+    
+    if (type === 'monthly') {
+        report = 'MLEA POS - MONTHLY REPORT\n';
+        report += '=' .repeat(40) + '\n';
+        report += `Period: ${thisMonth}\n`;
+        report += `Generated: ${new Date().toLocaleString()}\n\n`;
+        
+        const monthSales = allSales.filter(s => s.date.startsWith(thisMonth));
+        report += `Total Sales: ${formatCurrency(monthSales.reduce((s, i) => s + i.total, 0))}\n`;
+        report += `Transactions: ${monthSales.length}\n`;
+        report += `Avg Sale: ${formatCurrency(monthSales.length > 0 ? monthSales.reduce((s, i) => s + i.total, 0) / monthSales.length : 0)}\n\n`;
+        
+        report += 'BRANCH BREAKDOWN:\n';
+        allBranches.forEach(b => {
+            const bSales = monthSales.filter(s => s.branchId === b.id);
+            report += `  ${b.name}: ${formatCurrency(bSales.reduce((s, i) => s + i.total, 0))} (${bSales.length} sales)\n`;
+        });
+    } else if (type === 'daily') {
+        report = `MLEA POS - DAILY REPORT\n${'='.repeat(40)}\nDate: ${today}\n\n`;
+        const daySales = allSales.filter(s => s.date === today);
+        report += `Total: ${formatCurrency(daySales.reduce((s, i) => s + i.total, 0))}\n`;
+        report += `Sales: ${daySales.length}\n\n`;
+        daySales.forEach(s => {
+            report += `  #${s.id} - ${formatCurrency(s.total)} (${s.paymentMethod})\n`;
+        });
+    } else if (type === 'branch') {
+        report = 'MLEA POS - BRANCH REPORT\n' + '='.repeat(40) + '\n\n';
+        allBranches.forEach(b => {
+            const bSales = allSales.filter(s => s.branchId === b.id && s.date.startsWith(thisMonth));
+            report += `${b.name}\n${'-'.repeat(20)}\n`;
+            report += `  Sales: ${formatCurrency(bSales.reduce((s, i) => s + i.total, 0))}\n`;
+            report += `  Transactions: ${bSales.length}\n`;
+            report += `  Users: ${DB.getAll('users').filter(u => u.branchId === b.id).length}\n`;
+            report += `  Products: ${DB.getAll('products').filter(p => p.branchId === b.id).length}\n\n`;
+        });
+    }
+    
+    downloadText(report, `${type}_report_${today}.txt`);
+}
+
+function exportBranchReport(type) {
+    const today = new Date().toISOString().split('T')[0];
+    const thisMonth = today.substring(0, 7);
+    const mySales = getMyData('sales');
+    const branch = DB.getById('branches', currentUser.branchId);
+    let report = '';
+    
+    report = `MLEA POS - ${branch?.name || 'Branch'} REPORT\n`;
+    report += '='.repeat(40) + '\n';
+    report += `Generated: ${new Date().toLocaleString()}\n`;
+    report += `Manager: ${currentUser.name}\n\n`;
+    
+    if (type === 'summary') {
+        const monthSales = mySales.filter(s => s.date.startsWith(thisMonth));
+        report += `MONTHLY SUMMARY (${thisMonth})\n${'-'.repeat(20)}\n`;
+        report += `Total Sales: ${formatCurrency(monthSales.reduce((s, i) => s + i.total, 0))}\n`;
+        report += `Transactions: ${monthSales.length}\n`;
+        report += `Avg Sale: ${formatCurrency(monthSales.length > 0 ? monthSales.reduce((s, i) => s + i.total, 0) / monthSales.length : 0)}\n`;
+        report += `Cash: ${formatCurrency(monthSales.filter(s => s.paymentMethod === 'cash').reduce((s, i) => s + i.total, 0))}\n`;
+        report += `Card: ${formatCurrency(monthSales.filter(s => s.paymentMethod === 'card').reduce((s, i) => s + i.total, 0))}\n`;
+    } else {
+        report += `DETAILED REPORT\n${'-'.repeat(20)}\n\n`;
+        const recentSales = mySales.slice(-20).reverse();
+        recentSales.forEach(s => {
+            report += `#${s.id} | ${s.date} | ${formatCurrency(s.total)} | ${s.paymentMethod} | ${s.cashierName}\n`;
+        });
+        report += `\nPRODUCTS:\n`;
+        getMyData('products').forEach(p => {
+            report += `  ${p.name} - ${formatCurrency(p.price)} | Stock: ${p.stock}\n`;
+        });
+    }
+    
+    downloadText(report, `${branch?.name || 'branch'}_${type}_${today}.txt`);
+}
+
+function downloadText(text, filename) {
+    const blob = new Blob([text], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+}
+
+// Also update the exportCSV function to include more details:
+function exportCSV(type) {
+    let csv = '';
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (type === 'sales') {
+        csv = 'Sale ID,Date,Total,Subtotal,Tax,Payment Method,Cashier,Branch\n';
+        getMyData('sales').forEach(s => {
+            const branch = s.branchId ? DB.getById('branches', s.branchId) : null;
+            csv += `${s.id},${s.date},${s.total},${s.subtotal || 0},${s.tax || 0},${s.paymentMethod},${s.cashierName || ''},${branch?.name || 'N/A'}\n`;
+        });
+    } else if (type === 'inventory') {
+        csv = 'SKU,Name,Price,Stock,Category,Active,Branch\n';
+        getMyData('products').forEach(p => {
+            const branch = p.branchId ? DB.getById('branches', p.branchId) : null;
+            csv += `${p.sku},${p.name},${p.price},${p.stock},${p.category || ''},${p.active},${branch?.name || 'Global'}\n`;
+        });
+    }
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${type}_report_${today}.csv`;
+    a.click();
+}
 
     function backupAllData() {
         const data = {}; DB.stores.forEach(s => data[s] = DB.getAll(s));
