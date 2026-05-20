@@ -326,24 +326,41 @@ function submitPin() {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         
-        // Update header
-        document.getElementById('headerUser').textContent = user.name;
-        document.getElementById('sidebarUserInfo').textContent = user.name + ' (' + user.role + ')';
-        document.getElementById('sidebarRole').textContent = user.role;
-        document.getElementById('sidebarRole').className = 'role-badge ' + user.role + '-badge';
-        document.getElementById('headerCurrency').textContent = currencies[currentCurrency].flag + ' ' + currentCurrency;
+        // Update header - SAFELY check each element
+        const headerUser = document.getElementById('headerUser');
+        if (headerUser) headerUser.textContent = user.name;
         
-        // Branch info
+        const sidebarUserInfo = document.getElementById('sidebarUserInfo');
+        if (sidebarUserInfo) sidebarUserInfo.textContent = user.name + ' (' + user.role + ')';
+        
+        const sidebarRole = document.getElementById('sidebarRole');
+        if (sidebarRole) {
+            sidebarRole.textContent = user.role;
+            sidebarRole.className = 'role-badge ' + user.role + '-badge';
+        }
+        
+        const headerCurrency = document.getElementById('headerCurrency');
+        if (headerCurrency) {
+            headerCurrency.textContent = currencies[currentCurrency].flag + ' ' + currentCurrency;
+        }
+        
+        // Branch info - SAFELY
+        const headerBranch = document.getElementById('headerBranch');
+        const headerTitle = document.getElementById('headerTitle');
+        const sidebarBranch = document.getElementById('sidebarBranch');
+        
         if (user.branchId) {
             const branch = DB.getById('branches', user.branchId);
-            document.getElementById('headerBranch').innerHTML = '<span class="branch-indicator">🏢 ' + (branch ? branch.name : 'Branch') + '</span>';
-            document.getElementById('headerTitle').textContent = (branch ? branch.name : 'Branch') + ' POS';
-            document.getElementById('sidebarBranch').textContent = branch ? branch.name : '';
-            document.getElementById('sidebarBranch').style.display = 'inline';
+            if (headerBranch) headerBranch.innerHTML = '<span class="branch-indicator">🏢 ' + (branch ? branch.name : 'Branch') + '</span>';
+            if (headerTitle) headerTitle.textContent = (branch ? branch.name : 'Branch') + ' POS';
+            if (sidebarBranch) {
+                sidebarBranch.textContent = branch ? branch.name : '';
+                sidebarBranch.style.display = 'inline';
+            }
         } else {
-            document.getElementById('headerBranch').innerHTML = '<span class="admin-indicator">👑 Admin</span>';
-            document.getElementById('headerTitle').textContent = 'MLEA HQ Admin';
-            document.getElementById('sidebarBranch').style.display = 'none';
+            if (headerBranch) headerBranch.innerHTML = '<span class="admin-indicator">👑 Admin</span>';
+            if (headerTitle) headerTitle.textContent = 'MLEA HQ Admin';
+            if (sidebarBranch) sidebarBranch.style.display = 'none';
         }
         
         // Build sidebar
