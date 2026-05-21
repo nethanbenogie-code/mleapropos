@@ -3,116 +3,302 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MLEA POS - Multi-Branch System</title>
+    <title>MLEA POS — Multi-Branch System</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#1a1a2e">
+    <meta name="theme-color" content="#080b14">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1a2e;color:#e0e0e0;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
-        .app-container{max-width:480px;margin:0 auto;min-height:100vh;background:#16213e;position:relative}
-        @media(min-width:768px){.app-container{max-width:768px}}
-        
-        #licenseGate{min-height:100vh;display:flex;justify-content:center;align-items:center;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);padding:15px}
-        .license-gate-card{background:#1e2a4a;border-radius:20px;padding:25px;width:100%;max-width:380px;border:2px solid #7c6fff;text-align:center}
-        .license-gate-card .logo{font-size:2.5em;margin-bottom:8px}
-        .license-gate-card h2{color:#9b8fff;margin-bottom:5px;font-size:1.3em}
-        .license-gate-card p{color:#a0a0b0;font-size:.8em;margin-bottom:20px}
-        .license-gate-card input{width:100%;padding:14px;border:2px solid #2a3a5e;border-radius:12px;font-size:1em;text-align:center;letter-spacing:3px;background:#0f3460;color:#e0e0e0;outline:none;margin-bottom:12px;font-family:'Courier New',monospace}
-        .license-gate-card input:focus{border-color:#7c6fff}
-        .license-gate-card .btn-activate{width:100%;padding:14px;background:#2ed573;color:#fff;border:none;border-radius:12px;font-size:1em;font-weight:bold;cursor:pointer;margin-bottom:8px}
-        .license-gate-card .btn-deactivate{width:100%;padding:10px;background:transparent;color:#ff4757;border:1px solid #ff4757;border-radius:12px;font-size:.8em;cursor:pointer}
-        .license-gate-card .status{font-size:.75em;margin-top:10px;min-height:18px}
-        .license-gate-card .status.success{color:#2ed573}.license-gate-card .status.error{color:#ff4757}
-        
-        #loginScreen{min-height:100vh;display:flex;justify-content:center;align-items:center;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);padding:15px}
-        .login-card{background:#1e2a4a;border-radius:20px;padding:20px;width:100%;max-width:360px;border:1px solid #2a3a5e}
-        .login-logo{text-align:center;margin-bottom:20px}.login-logo h1{color:#9b8fff;font-size:1.8em}.login-logo p{color:#a0a0b0;font-size:.85em}
-        .user-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:15px;max-height:200px;overflow-y:auto}
-        .user-card{background:#16213e;border:2px solid #2a3a5e;border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s}
-        .user-card.selected{border-color:#7c6fff;background:#0f3460}.user-card .avatar{font-size:1.8em}.user-card .name{font-size:.7em;color:#e0e0e0;margin-top:3px}
-        .role-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.65em;margin-top:3px}
-        .admin-badge{background:#7c6fff;color:#fff}.manager-badge{background:#2ed573;color:#fff}.cashier-badge{background:#ffa502;color:#fff}
-        .pin-display{display:flex;justify-content:center;gap:12px;margin:15px 0}
-        .pin-dot{width:14px;height:14px;border-radius:50%;background:#2a3a5e;transition:all .3s}
-        .pin-dot.filled{background:#7c6fff;box-shadow:0 0 8px #7c6fff}.pin-dot.error{background:#ff4757}
-        .error-msg{color:#ff4757;text-align:center;font-size:.8em;min-height:18px;margin:5px 0}
-        .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-        .pin-btn{background:#0f3460;border:1px solid #2a3a5e;border-radius:10px;padding:16px;font-size:1.3em;cursor:pointer;color:#e0e0e0}
-        .pin-btn:active{background:#7c6fff}.pin-btn.clear{background:#ff4757;color:#fff;font-size:.9em}.pin-btn.submit{background:#2ed573;color:#fff;font-size:.9em}
-        #mainApp{display:none}
-        .header{background:#1a1a2e;padding:12px 15px;position:sticky;top:0;z-index:100;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2a3a5e}
-        .header h1{color:#9b8fff;font-size:1.2em}.header-right{display:flex;align-items:center;gap:10px;font-size:.8em;color:#a0a0b0}
-        .logout-btn{background:#ff4757;color:#fff;border:none;padding:6px 12px;border-radius:15px;cursor:pointer;font-size:.8em}
-        .hamburger{background:none;border:none;color:#e0e0e0;font-size:22px;cursor:pointer}
-        .branch-indicator{background:rgba(46,213,115,0.2);color:#2ed573;padding:4px 10px;border-radius:15px;font-size:.75em}
-        .admin-indicator{background:rgba(124,111,255,0.2);color:#9b8fff;padding:4px 10px;border-radius:15px;font-size:.75em}
-        #mainContent{padding:10px;min-height:60vh}
-        .card{background:#1e2a4a;border-radius:10px;padding:15px;margin:8px 0;border:1px solid #2a3a5e}
-        .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-        .metric-card{background:#16213e;border-radius:8px;padding:12px;text-align:center;border:1px solid #2a3a5e}
-        .metric-value{font-size:1.2em;font-weight:bold;color:#9b8fff}.metric-label{font-size:.7em;color:#a0a0b0;margin-top:4px}
-        .btn{padding:10px 20px;border:none;border-radius:20px;cursor:pointer;font-size:.85em;font-weight:500}.btn:active{transform:scale(.95)}
-        .btn-primary{background:#7c6fff;color:#fff}.btn-success{background:#2ed573;color:#fff}.btn-danger{background:#ff4757;color:#fff}.btn-warning{background:#ffa502;color:#fff}
-        .btn-sm{padding:5px 10px;font-size:.7em}.btn-xs{padding:3px 8px;font-size:.65em}.btn-block{width:100%;margin-bottom:5px}
-        input,select{width:100%;padding:10px;border:2px solid #2a3a5e;border-radius:20px;font-size:.9em;background:#0f3460;color:#e0e0e0;outline:none;font-family:inherit;margin-bottom:5px}
-        input:focus,select:focus{border-color:#7c6fff}
-        table{width:100%;border-collapse:collapse;font-size:.8em}
-        th{background:#0f3460;color:#9b8fff;padding:8px;text-align:left}td{padding:8px;border-bottom:1px solid #2a3a5e;color:#a0a0b0}
-        .product-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-        .product-card{background:#16213e;border-radius:8px;padding:12px;cursor:pointer;border:1px solid #2a3a5e}.product-card:active{transform:scale(.96)}
-        .cart-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #2a3a5e;gap:5px}
-        .sidebar{position:fixed;left:-300px;top:0;bottom:0;width:280px;background:#1a1a2e;z-index:1000;transition:left .3s;overflow-y:auto;border-right:1px solid #2a3a5e}
-        .sidebar.active{left:0}.sidebar-header{padding:20px 15px;background:#0f3460;border-bottom:2px solid #7c6fff}
-        .sidebar-header h3{color:#9b8fff;font-size:1.3em}.sidebar-nav{padding:10px 8px}
-        .sidebar-section-title{font-size:.6em;color:#6a6a7a;text-transform:uppercase;letter-spacing:2px;padding:8px 12px 4px;font-weight:700}
-        .sidebar-nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;color:#a0a0b0;font-size:.82em}.sidebar-nav-item.active{background:rgba(124,111,255,.2);color:#fff;font-weight:600}
-        .sidebar-nav-icon{font-size:1.1em;width:24px;text-align:center}.sidebar-footer{padding:10px;border-top:1px solid #2a3a5e;margin-top:auto}
-        .sidebar-footer-btn{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border-radius:10px;cursor:pointer;color:#ff4757;font-size:.8em;border:none;background:none;font-family:inherit}
-        .sidebar-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:999}.sidebar-overlay.active{display:block}
-        .modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);z-index:2000;justify-content:center;align-items:center;padding:15px}
-        .modal.active{display:flex}.modal-content{background:#1e2a4a;border-radius:15px;padding:20px;width:100%;max-width:400px;max-height:85vh;overflow-y:auto;border:1px solid #2a3a5e}
-        .stock-low{color:#ff4757;font-weight:bold}.empty-state{text-align:center;padding:40px;color:#a0a0b0}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg-void:#080b14;
+  --bg-deep:#0d1220;
+  --bg-surface:#111827;
+  --bg-elevated:#161f33;
+  --bg-glass:rgba(255,255,255,0.04);
+  --bg-glass-hover:rgba(255,255,255,0.07);
+  --border:rgba(255,255,255,0.08);
+  --border-bright:rgba(255,255,255,0.15);
+  --accent-gold:#d4a853;
+  --accent-gold-soft:rgba(212,168,83,0.15);
+  --accent-gold-glow:rgba(212,168,83,0.35);
+  --accent-emerald:#2dd4a0;
+  --accent-emerald-soft:rgba(45,212,160,0.12);
+  --accent-rose:#f06577;
+  --accent-rose-soft:rgba(240,101,119,0.12);
+  --accent-blue:#6fa3ef;
+  --accent-blue-soft:rgba(111,163,239,0.12);
+  --text-primary:#f0f0f5;
+  --text-secondary:#8892a4;
+  --text-muted:#4a5568;
+  --font-display:'Syne',sans-serif;
+  --font-body:'DM Sans',sans-serif;
+  --font-mono:'DM Mono',monospace;
+  --radius-sm:8px;
+  --radius-md:14px;
+  --radius-lg:20px;
+  --radius-xl:28px;
+  --shadow-ambient:0 0 60px rgba(212,168,83,0.04);
+  --shadow-card:0 4px 30px rgba(0,0,0,0.4);
+  --shadow-glow-gold:0 0 30px rgba(212,168,83,0.2);
+  --shadow-glow-emerald:0 0 30px rgba(45,212,160,0.2);
+}
+
+body{font-family:var(--font-body);background:var(--bg-void);color:var(--text-primary);overflow-x:hidden;min-height:100vh}
+.app-container{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg-deep);position:relative;overflow-x:hidden}
+@media(min-width:768px){.app-container{max-width:768px}}
+
+/* ── AMBIENT BACKGROUND ── */
+.ambient{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.ambient::before{content:'';position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(212,168,83,0.06) 0%,transparent 70%);top:-100px;right:-100px;animation:drift 20s ease-in-out infinite}
+.ambient::after{content:'';position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(45,212,160,0.04) 0%,transparent 70%);bottom:-100px;left:-100px;animation:drift 25s ease-in-out infinite reverse}
+@keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(20px,-20px) scale(1.05)}66%{transform:translate(-10px,15px) scale(0.97)}}
+
+/* ── LICENSE GATE ── */
+#licenseGate{min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;position:relative;z-index:10}
+.license-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:36px 28px;width:100%;max-width:360px;text-align:center;box-shadow:var(--shadow-card),var(--shadow-ambient);animation:slideUp .5s cubic-bezier(0.22,1,0.36,1)}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.license-logo{width:64px;height:64px;background:linear-gradient(135deg,var(--accent-gold),#f0c060);border-radius:var(--radius-md);margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:var(--shadow-glow-gold)}
+.license-card h2{font-family:var(--font-display);font-size:1.5em;font-weight:700;color:var(--text-primary);letter-spacing:-0.02em}
+.license-card p{color:var(--text-secondary);font-size:.82em;margin:6px 0 24px;font-weight:300}
+.license-card input{width:100%;padding:14px 18px;background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-md);font-size:1.05em;text-align:center;letter-spacing:4px;color:var(--text-primary);outline:none;font-family:var(--font-mono);transition:all .25s;margin-bottom:12px}
+.license-card input:focus{border-color:var(--accent-gold);background:rgba(212,168,83,0.06);box-shadow:0 0 0 3px var(--accent-gold-glow)}
+.btn-activate{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent-gold),#e8b850);color:#1a0f00;border:none;border-radius:var(--radius-md);font-size:.92em;font-weight:700;font-family:var(--font-display);cursor:pointer;letter-spacing:.04em;transition:all .2s;box-shadow:var(--shadow-glow-gold)}
+.btn-activate:hover{transform:translateY(-1px);box-shadow:0 0 40px rgba(212,168,83,0.45)}
+.btn-activate:active{transform:translateY(0)}
+.btn-deactivate{width:100%;padding:11px;background:transparent;color:var(--accent-rose);border:1px solid rgba(240,101,119,0.3);border-radius:var(--radius-md);font-size:.8em;cursor:pointer;font-family:var(--font-body);margin-top:8px;transition:all .2s}
+.btn-deactivate:hover{background:var(--accent-rose-soft)}
+.license-status{font-size:.75em;margin-top:12px;min-height:18px;font-weight:500}
+.license-status.success{color:var(--accent-emerald)}.license-status.error{color:var(--accent-rose)}
+
+/* ── LOGIN SCREEN ── */
+#loginScreen{min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;position:relative;z-index:10}
+.login-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:28px 22px;width:100%;max-width:360px;box-shadow:var(--shadow-card);animation:slideUp .5s cubic-bezier(0.22,1,0.36,1)}
+.login-logo{text-align:center;margin-bottom:24px}
+.login-logo-icon{width:56px;height:56px;background:linear-gradient(135deg,var(--accent-gold),#f0c060);border-radius:var(--radius-md);margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:var(--shadow-glow-gold)}
+.login-logo h1{font-family:var(--font-display);color:var(--text-primary);font-size:1.6em;font-weight:800;letter-spacing:-0.03em}
+.login-logo p{color:var(--text-secondary);font-size:.78em;font-weight:300;margin-top:3px;letter-spacing:.04em}
+.section-label{font-size:.65em;color:var(--text-muted);text-transform:uppercase;letter-spacing:.12em;font-weight:600;font-family:var(--font-display);margin-bottom:8px}
+.user-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:18px;max-height:190px;overflow-y:auto}
+.user-selector::-webkit-scrollbar{width:3px}.user-selector::-webkit-scrollbar-track{background:transparent}.user-selector::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:3px}
+.user-card{background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.user-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(212,168,83,0.08));opacity:0;transition:opacity .2s}
+.user-card:hover::before,.user-card.selected::before{opacity:1}
+.user-card.selected{border-color:var(--accent-gold);background:var(--accent-gold-soft);box-shadow:0 0 20px var(--accent-gold-glow)}
+.user-card .avatar{font-size:1.6em;display:block}
+.user-card .name{font-size:.68em;color:var(--text-primary);margin-top:4px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.role-badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:.6em;font-weight:600;font-family:var(--font-display);letter-spacing:.04em;margin-top:3px}
+.admin-badge{background:rgba(212,168,83,0.2);color:var(--accent-gold)}
+.manager-badge{background:var(--accent-emerald-soft);color:var(--accent-emerald)}
+.cashier-badge{background:var(--accent-blue-soft);color:var(--accent-blue)}
+.pin-display{display:flex;justify-content:center;gap:14px;margin:14px 0 8px}
+.pin-dot{width:12px;height:12px;border-radius:50%;background:var(--bg-glass);border:1.5px solid var(--border);transition:all .25s}
+.pin-dot.filled{background:var(--accent-gold);border-color:var(--accent-gold);box-shadow:0 0 12px var(--accent-gold-glow);transform:scale(1.15)}
+.pin-dot.error{background:var(--accent-rose);border-color:var(--accent-rose);box-shadow:0 0 12px rgba(240,101,119,0.5);animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.error-msg{color:var(--accent-rose);text-align:center;font-size:.78em;min-height:18px;margin-bottom:8px;font-weight:500}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.pin-btn{background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;font-size:1.25em;cursor:pointer;color:var(--text-primary);font-family:var(--font-display);font-weight:600;transition:all .15s;position:relative;overflow:hidden}
+.pin-btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0.08);opacity:0;transition:opacity .15s}
+.pin-btn:active::after{opacity:1}
+.pin-btn:hover{border-color:var(--border-bright);background:var(--bg-glass-hover)}
+.pin-btn:active{transform:scale(.94)}
+.pin-btn.clear{background:var(--accent-rose-soft);color:var(--accent-rose);border-color:rgba(240,101,119,0.25);font-size:.8em;font-weight:600}
+.pin-btn.submit{background:linear-gradient(135deg,var(--accent-gold),#e8b850);color:#1a0f00;border-color:transparent;font-size:.95em;box-shadow:0 4px 15px var(--accent-gold-glow)}
+.pin-btn.submit:active{transform:scale(.94)}
+
+/* ── MAIN APP ── */
+#mainApp{display:none;position:relative;z-index:10}
+.header{background:rgba(13,18,32,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:14px 16px;position:sticky;top:0;z-index:100;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.header-logo{font-family:var(--font-display);color:var(--text-primary);font-size:1.05em;font-weight:700;letter-spacing:-0.02em}
+.header-right{display:flex;align-items:center;gap:8px}
+.logout-btn{background:var(--accent-rose-soft);color:var(--accent-rose);border:1px solid rgba(240,101,119,0.2);padding:7px 14px;border-radius:20px;cursor:pointer;font-size:.75em;font-weight:600;font-family:var(--font-display);transition:all .2s;letter-spacing:.03em}
+.logout-btn:hover{background:rgba(240,101,119,0.25)}
+.hamburger{background:var(--bg-glass);border:1px solid var(--border);color:var(--text-primary);font-size:18px;cursor:pointer;width:38px;height:38px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;transition:all .2s}
+.hamburger:hover{background:var(--bg-glass-hover);border-color:var(--border-bright)}
+.branch-indicator{background:var(--accent-emerald-soft);color:var(--accent-emerald);padding:5px 11px;border-radius:20px;font-size:.72em;font-weight:600;font-family:var(--font-display);letter-spacing:.03em;border:1px solid rgba(45,212,160,0.2)}
+.admin-indicator{background:var(--accent-gold-soft);color:var(--accent-gold);padding:5px 11px;border-radius:20px;font-size:.72em;font-weight:600;font-family:var(--font-display);letter-spacing:.03em;border:1px solid rgba(212,168,83,0.25)}
+#mainContent{padding:14px;min-height:60vh}
+
+/* ── CARDS ── */
+.card{background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;margin:10px 0;backdrop-filter:blur(10px);transition:border-color .2s}
+.card:hover{border-color:var(--border-bright)}
+.card h4,.card h5{font-family:var(--font-display);font-weight:600;letter-spacing:-0.01em;margin-bottom:10px}
+.card h5{font-size:.88em;color:var(--text-secondary)}
+
+/* ── METRICS ── */
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.metric-card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;text-align:center;transition:all .2s;position:relative;overflow:hidden}
+.metric-card::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:60%;height:1px;background:linear-gradient(90deg,transparent,var(--accent-gold),transparent);opacity:0.4}
+.metric-value{font-family:var(--font-display);font-size:1.2em;font-weight:700;color:var(--accent-gold);letter-spacing:-0.02em}
+.metric-label{font-size:.66em;color:var(--text-muted);margin-top:5px;text-transform:uppercase;letter-spacing:.08em;font-weight:500}
+
+/* ── BUTTONS ── */
+.btn{padding:11px 22px;border:none;border-radius:var(--radius-md);cursor:pointer;font-size:.83em;font-weight:600;font-family:var(--font-display);letter-spacing:.03em;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:linear-gradient(135deg,var(--accent-gold),#e8b850);color:#1a0f00;box-shadow:0 4px 15px var(--accent-gold-glow)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 22px var(--accent-gold-glow)}
+.btn-success{background:var(--accent-emerald-soft);color:var(--accent-emerald);border:1px solid rgba(45,212,160,0.25)}
+.btn-success:hover{background:rgba(45,212,160,0.2)}
+.btn-danger{background:var(--accent-rose-soft);color:var(--accent-rose);border:1px solid rgba(240,101,119,0.2)}
+.btn-danger:hover{background:rgba(240,101,119,0.22)}
+.btn-warning{background:rgba(251,189,35,0.12);color:#fbb923;border:1px solid rgba(251,189,35,0.2)}
+.btn-warning:hover{background:rgba(251,189,35,0.2)}
+.btn-sm{padding:7px 14px;font-size:.72em;border-radius:var(--radius-sm)}
+.btn-xs{padding:4px 10px;font-size:.66em;border-radius:6px}
+.btn-block{width:100%;margin-bottom:8px}
+
+/* ── INPUTS ── */
+input[type="text"],input[type="number"],input[type="tel"],input[type="email"],input[type="file"],select,textarea{width:100%;padding:11px 16px;background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-md);font-size:.87em;color:var(--text-primary);outline:none;font-family:var(--font-body);margin-bottom:8px;transition:all .2s;-webkit-appearance:none}
+input:focus,select:focus{border-color:var(--accent-gold);background:rgba(212,168,83,0.05);box-shadow:0 0 0 3px rgba(212,168,83,0.12)}
+select{cursor:pointer}
+select option{background:var(--bg-surface);color:var(--text-primary)}
+
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse;font-size:.78em}
+th{background:var(--bg-elevated);color:var(--text-secondary);padding:10px 12px;text-align:left;font-family:var(--font-display);font-size:.7em;text-transform:uppercase;letter-spacing:.08em;font-weight:600;border-bottom:1px solid var(--border)}
+td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text-secondary);vertical-align:middle}
+tr:hover td{background:var(--bg-glass);color:var(--text-primary)}
+.stock-low{color:var(--accent-rose);font-weight:700}
+
+/* ── SIDEBAR ── */
+.sidebar{position:fixed;left:-300px;top:0;bottom:0;width:270px;background:rgba(13,18,32,0.96);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);z-index:1000;transition:left .3s cubic-bezier(0.22,1,0.36,1);overflow-y:auto;border-right:1px solid var(--border)}
+.sidebar.active{left:0}
+.sidebar-header{padding:24px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.sidebar-logo{width:40px;height:40px;background:linear-gradient(135deg,var(--accent-gold),#f0c060);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 4px 15px var(--accent-gold-glow)}
+.sidebar-header-text h3{font-family:var(--font-display);color:var(--text-primary);font-size:1.05em;font-weight:700;letter-spacing:-0.02em}
+.sidebar-header-text p{color:var(--text-muted);font-size:.68em;margin-top:2px}
+.sidebar-nav{padding:12px 10px;flex:1}
+.sidebar-section-title{font-size:.58em;color:var(--text-muted);text-transform:uppercase;letter-spacing:.15em;padding:12px 10px 5px;font-weight:700;font-family:var(--font-display)}
+.sidebar-nav-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:var(--radius-md);cursor:pointer;color:var(--text-secondary);font-size:.83em;font-weight:400;transition:all .18s;margin-bottom:2px;position:relative}
+.sidebar-nav-item:hover{background:var(--bg-glass);color:var(--text-primary)}
+.sidebar-nav-item.active{background:var(--accent-gold-soft);color:var(--accent-gold);font-weight:600}
+.sidebar-nav-item.active::before{content:'';position:absolute;left:0;top:25%;bottom:25%;width:3px;background:var(--accent-gold);border-radius:0 3px 3px 0}
+.sidebar-nav-icon{font-size:1em;width:22px;text-align:center;opacity:.85}
+.sidebar-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:999}.sidebar-overlay.active{display:block}
+.sidebar-footer{padding:12px 10px;border-top:1px solid var(--border);margin-top:auto}
+.sidebar-footer-btn{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border-radius:var(--radius-md);cursor:pointer;color:var(--accent-rose);font-size:.82em;font-weight:500;border:none;background:none;font-family:var(--font-body);transition:all .2s}
+.sidebar-footer-btn:hover{background:var(--accent-rose-soft)}
+
+/* ── MODAL ── */
+.modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(12px);z-index:2000;justify-content:center;align-items:center;padding:20px}
+.modal.active{display:flex}
+.modal-content{background:var(--bg-surface);border:1px solid var(--border-bright);border-radius:var(--radius-xl);padding:26px;width:100%;max-width:400px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-card);animation:slideUp .3s cubic-bezier(0.22,1,0.36,1)}
+.modal-content h4{font-family:var(--font-display);font-size:1.1em;font-weight:700;letter-spacing:-0.02em;margin-bottom:16px;color:var(--text-primary)}
+.modal-content::-webkit-scrollbar{width:3px}.modal-content::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:3px}
+
+/* ── POS SPECIFIC ── */
+.product-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.product-card{background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
+.product-card::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--accent-gold-soft),transparent);opacity:0;transition:opacity .2s}
+.product-card:hover{border-color:rgba(212,168,83,0.4);transform:translateY(-1px);box-shadow:0 8px 25px rgba(0,0,0,0.3)}
+.product-card:hover::after{opacity:1}
+.product-card:active{transform:scale(.96)}
+.product-card strong{font-family:var(--font-display);font-size:.85em;display:block;margin-bottom:4px;position:relative;z-index:1}
+.product-card .price{color:var(--accent-gold);font-weight:700;font-size:.95em;font-family:var(--font-display);position:relative;z-index:1}
+.product-card small{color:var(--text-muted);font-size:.67em;position:relative;z-index:1}
+.cart-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);gap:8px}
+.cart-item:last-of-type{border-bottom:none}
+
+.scan-input-wrap{position:relative;margin-bottom:14px}
+.scan-input-wrap::before{content:'⚡';position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;z-index:1;opacity:.6}
+#scanInput{padding-left:40px;font-size:.95em;background:var(--bg-glass);border:1px solid var(--accent-emerald);border-radius:var(--radius-md);color:var(--text-primary);font-family:var(--font-mono)}
+#scanInput:focus{border-color:var(--accent-emerald);box-shadow:0 0 0 3px var(--accent-emerald-soft)}
+.scan-hint{color:var(--accent-emerald);font-size:.68em;text-align:center;margin-top:4px;font-weight:500;letter-spacing:.04em}
+
+/* ── DASHBOARD WELCOME ── */
+.welcome-card{background:linear-gradient(135deg,var(--bg-elevated),var(--bg-glass));border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:12px;position:relative;overflow:hidden}
+.welcome-card::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,var(--accent-gold-soft),transparent);pointer-events:none}
+.welcome-card h3{font-family:var(--font-display);font-size:1.15em;font-weight:700;letter-spacing:-0.02em;margin-bottom:4px}
+.welcome-card p{color:var(--text-secondary);font-size:.8em}
+.welcome-card .role-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:.7em;font-weight:600;margin-top:10px;font-family:var(--font-display);letter-spacing:.04em}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-muted)}
+.empty-state .empty-icon{font-size:2.5em;margin-bottom:10px;opacity:.5}
+.empty-state p{font-size:.85em}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:12px 0}
+
+/* ── NOTIFICATION / SALE COMPLETE ── */
+.sale-complete{text-align:center;padding:10px}
+.sale-complete .check-circle{width:70px;height:70px;background:var(--accent-emerald-soft);border:2px solid var(--accent-emerald);border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:30px;animation:popIn .4s cubic-bezier(0.22,1,0.36,1)}
+@keyframes popIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+.sale-complete h3{font-family:var(--font-display);color:var(--accent-emerald);font-size:1.2em;margin-bottom:6px}
+.sale-complete .amount{font-family:var(--font-display);font-size:2em;font-weight:800;color:var(--text-primary);letter-spacing:-0.03em}
+.sale-complete small{color:var(--text-muted);font-size:.78em;display:block;margin-top:6px}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:4px}
+
+/* ── PRINT ── */
+@media print{.sidebar,.header,.hamburger,.sidebar-overlay{display:none!important}.app-container{max-width:100%}}
     </style>
 </head>
 <body>
-    <div class="app-container">
-        <div id="licenseGate">
-            <div class="license-gate-card">
-                <div class="logo">🔐</div><h2>MLEA POS</h2><p>Enter your license key to unlock</p>
-                <input type="text" id="licenseInput" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19" oninput="formatLicense(this)">
-                <button class="btn-activate" id="activateBtn" onclick="handleActivation()">Activate License</button>
-                <button class="btn-deactivate" id="deactivateBtn" style="display:none;" onclick="handleDeactivation()">Deactivate License</button>
-                <div class="status" id="licenseStatus"></div>
-            </div>
-        </div>
-        <div id="loginScreen" style="display:none;">
-            <div class="login-card">
-                <div class="login-logo"><h1>🏪 MLEA POS</h1><p>Multi-Branch System v2.3</p></div>
-                <div style="text-align:center;color:#a0a0b0;font-size:.8em;">👤 Select User</div>
-                <div class="user-selector" id="userSelector"></div>
-                <div style="text-align:center;color:#a0a0b0;font-size:.8em;">🔢 Enter PIN</div>
-                <div class="pin-display" id="pinDisplay"><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div></div>
-                <div class="error-msg" id="errorMessage"></div>
-                <div class="pin-pad">
-                    <button class="pin-btn" onclick="enterPin('1')">1</button><button class="pin-btn" onclick="enterPin('2')">2</button><button class="pin-btn" onclick="enterPin('3')">3</button>
-                    <button class="pin-btn" onclick="enterPin('4')">4</button><button class="pin-btn" onclick="enterPin('5')">5</button><button class="pin-btn" onclick="enterPin('6')">6</button>
-                    <button class="pin-btn" onclick="enterPin('7')">7</button><button class="pin-btn" onclick="enterPin('8')">8</button><button class="pin-btn" onclick="enterPin('9')">9</button>
-                    <button class="pin-btn clear" onclick="clearPin()">Clear</button><button class="pin-btn" onclick="enterPin('0')">0</button><button class="pin-btn submit" onclick="submitPin()">→</button>
-                </div>
-            </div>
-        </div>
-        <div id="mainApp">
-            <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-            <div class="sidebar" id="sidebar">
-                <div class="sidebar-header"><h3>🏪 MLEA POS</h3><p style="color:#a0a0b0;font-size:.7em;">v2.3 Licensed</p></div>
-                <div class="sidebar-nav" id="sidebarNav"></div>
-                <div class="sidebar-footer"><button class="sidebar-footer-btn" onclick="logout()">🚪 Sign Out</button></div>
-            </div>
-            <div class="header"><button class="hamburger" onclick="openSidebar()">☰</button><h1 id="headerTitle">MLEA POS</h1><div class="header-right"><span id="headerBranch"></span><span id="headerUser"></span><button class="logout-btn" onclick="logout()">🚪</button></div></div>
-            <div id="mainContent"></div>
+<div class="ambient"></div>
+<div class="app-container">
+    <!-- LICENSE GATE -->
+    <div id="licenseGate">
+        <div class="license-card">
+            <div class="license-logo">🔐</div>
+            <h2>MLEA POS</h2>
+            <p>Enter your license key to unlock the system</p>
+            <input type="text" id="licenseInput" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19" oninput="formatLicense(this)">
+            <button class="btn-activate" id="activateBtn" onclick="handleActivation()">Activate License</button>
+            <button class="btn-deactivate" id="deactivateBtn" style="display:none;" onclick="handleDeactivation()">Deactivate License</button>
+            <div class="license-status" id="licenseStatus"></div>
         </div>
     </div>
-    <div class="modal" id="modal"><div class="modal-content" id="modalContent"></div></div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" style="display:none;">
+        <div class="login-card">
+            <div class="login-logo">
+                <div class="login-logo-icon">🏪</div>
+                <h1>MLEA POS</h1>
+                <p>Multi-Branch System · v2.3</p>
+            </div>
+            <div class="section-label">Select User</div>
+            <div class="user-selector" id="userSelector"></div>
+            <div class="section-label" style="margin-top:4px;">Enter PIN</div>
+            <div class="pin-display" id="pinDisplay">
+                <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+            </div>
+            <div class="error-msg" id="errorMessage"></div>
+            <div class="pin-pad">
+                <button class="pin-btn" onclick="enterPin('1')">1</button><button class="pin-btn" onclick="enterPin('2')">2</button><button class="pin-btn" onclick="enterPin('3')">3</button>
+                <button class="pin-btn" onclick="enterPin('4')">4</button><button class="pin-btn" onclick="enterPin('5')">5</button><button class="pin-btn" onclick="enterPin('6')">6</button>
+                <button class="pin-btn" onclick="enterPin('7')">7</button><button class="pin-btn" onclick="enterPin('8')">8</button><button class="pin-btn" onclick="enterPin('9')">9</button>
+                <button class="pin-btn clear" onclick="clearPin()">Clear</button><button class="pin-btn" onclick="enterPin('0')">0</button><button class="pin-btn submit" onclick="submitPin()">→</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="mainApp">
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">🏪</div>
+                <div class="sidebar-header-text"><h3>MLEA POS</h3><p>v2.3 Licensed</p></div>
+            </div>
+            <div class="sidebar-nav" id="sidebarNav"></div>
+            <div class="sidebar-footer"><button class="sidebar-footer-btn" onclick="logout()">🚪 Sign Out</button></div>
+        </div>
+        <div class="header">
+            <button class="hamburger" onclick="openSidebar()">☰</button>
+            <span class="header-logo" id="headerTitle">MLEA POS</span>
+            <div class="header-right">
+                <span id="headerBranch"></span>
+                <button class="logout-btn" onclick="logout()">Sign Out</button>
+            </div>
+        </div>
+        <div id="mainContent"></div>
+    </div>
+</div>
+<div class="modal" id="modal"><div class="modal-content" id="modalContent"></div></div>
 
 <script>
 // ═══════════════════ LICENSE SYSTEM ═══════════════════
@@ -122,31 +308,49 @@ function getDeviceId(){return btoa(navigator.userAgent.slice(-15)+screen.width+'
 function formatLicense(input){let v=input.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase();if(v.length>16)v=v.slice(0,16);let p=[];for(let i=0;i<v.length;i+=4)p.push(v.slice(i,i+4));input.value=p.join('-')}
 function isActivated(){return localStorage.getItem('mlea_pos_activated')==='true'}
 function setActivated(key){localStorage.setItem('mlea_pos_activated','true');localStorage.setItem('mlea_pos_license',key);showLicenseGate()}
-function clearActivation(){localStorage.removeItem('mlea_pos_activated');localStorage.removeItem('mlea_pos_license');showLicenseGate()}
+function clearActivation(){localStorage.removeItem('mlea_pos_activated');localStorage.removeItem('mlea_pos_license');currentUser=null;cart=[];showLicenseGate()}
 function getStoredLicense(){return localStorage.getItem('mlea_pos_license')||''}
 function showLicenseGate(){
-  if(isActivated()){document.getElementById('licenseGate').style.display='none';document.getElementById('loginScreen').style.display='flex';document.getElementById('mainApp').style.display='none';document.getElementById('licenseInput').value=getStoredLicense();document.getElementById('activateBtn').style.display='none';document.getElementById('deactivateBtn').style.display='block';document.getElementById('licenseStatus').textContent='✅ System Activated';document.getElementById('licenseStatus').className='status success';initApp()}
-  else{document.getElementById('licenseGate').style.display='flex';document.getElementById('loginScreen').style.display='none';document.getElementById('mainApp').style.display='none';document.getElementById('licenseInput').value='';document.getElementById('activateBtn').style.display='block';document.getElementById('deactivateBtn').style.display='none';document.getElementById('licenseStatus').textContent='';document.getElementById('licenseStatus').className='status'}
+  if(isActivated()){
+    document.getElementById('licenseGate').style.display='none';
+    document.getElementById('loginScreen').style.display='flex';
+    document.getElementById('mainApp').style.display='none';
+    document.getElementById('licenseInput').value=getStoredLicense();
+    document.getElementById('activateBtn').style.display='none';
+    document.getElementById('deactivateBtn').style.display='block';
+    const s=document.getElementById('licenseStatus');s.textContent='✓ System Activated';s.className='license-status success';
+    initApp();
+  } else {
+    document.getElementById('licenseGate').style.display='flex';
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('mainApp').style.display='none';
+    document.getElementById('licenseInput').value='';
+    document.getElementById('activateBtn').style.display='block';
+    document.getElementById('deactivateBtn').style.display='none';
+    document.getElementById('licenseStatus').textContent='';
+    document.getElementById('licenseStatus').className='license-status';
+  }
 }
 async function handleActivation(){
   const input=document.getElementById('licenseInput'),statusEl=document.getElementById('licenseStatus'),btn=document.getElementById('activateBtn'),key=input.value.trim();
-  if(!key){statusEl.textContent='⚠️ Enter license key';statusEl.className='status error';return}
-  btn.disabled=true;statusEl.textContent='⏳ Verifying...';statusEl.className='status';
+  if(!key){statusEl.textContent='⚠ Enter license key';statusEl.className='license-status error';return}
+  btn.disabled=true;statusEl.textContent='Verifying…';statusEl.className='license-status';
   const url=LICENSE_SERVER+'?action=activate&licenseKey='+encodeURIComponent(key)+'&deviceId='+encodeURIComponent(getDeviceId());
-  try{const r=await fetch(url),t=await r.text();let d;try{d=JSON.parse(t)}catch(e){statusEl.textContent='❌ Server error';statusEl.className='status error';btn.disabled=false;return}
-    if(d.success){setActivated(key);statusEl.textContent='✅ Activated!';statusEl.className='status success'}
-    else{statusEl.textContent='❌ '+d.message;statusEl.className='status error'}
-  }catch(e){if(key===DEMO_KEY){setActivated(key);statusEl.textContent='⚠️ Offline mode';statusEl.className='status success'}else{statusEl.textContent='❌ Cannot reach server';statusEl.className='status error'}}
+  try{const r=await fetch(url),t=await r.text();let d;try{d=JSON.parse(t)}catch(e){statusEl.textContent='Server error';statusEl.className='license-status error';btn.disabled=false;return}
+    if(d.success){setActivated(key)}else{statusEl.textContent='✗ '+d.message;statusEl.className='license-status error'}
+  }catch(e){if(key===DEMO_KEY){setActivated(key)}else{statusEl.textContent='✗ Cannot reach server';statusEl.className='license-status error'}}
   btn.disabled=false;
 }
-async function handleDeactivation(){if(!confirm('Deactivate?'))return;try{await fetch(LICENSE_SERVER+'?action=deactivate&licenseKey='+encodeURIComponent(getStoredLicense())+'&deviceId='+encodeURIComponent(getDeviceId()))}catch(e){}currentUser=null;cart=[];clearActivation()}
+async function handleDeactivation(){if(!confirm('Deactivate this license?'))return;try{await fetch(LICENSE_SERVER+'?action=deactivate&licenseKey='+encodeURIComponent(getStoredLicense())+'&deviceId='+encodeURIComponent(getDeviceId()))}catch(e){}clearActivation()}
 
 // ═══════════════════ DATABASE ═══════════════════
-const DB={stores:['products','sales','users','settings','branches','activityLogs','suppliers','purchaseOrders'],init(){this.stores.forEach(s=>{if(!localStorage.getItem('mlea_'+s))localStorage.setItem('mlea_'+s,'[]')})},getAll(k){return JSON.parse(localStorage.getItem('mlea_'+k)||'[]')},set(k,d){localStorage.setItem('mlea_'+k,JSON.stringify(d))},add(k,item){const items=this.getAll(k);item.id=items.length>0?Math.max(...items.map(i=>i.id))+1:1;item.createdAt=new Date().toISOString();items.push(item);this.set(k,items);return item.id},update(k,item){const items=this.getAll(k);const idx=items.findIndex(i=>i.id===item.id);if(idx!==-1){item.updatedAt=new Date().toISOString();items[idx]=item;this.set(k,items)}},delete(k,id){this.set(k,this.getAll(k).filter(i=>i.id!==id))},getById(k,id){return this.getAll(k).find(i=>i.id===id)},getByBranch(k,bid){return this.getAll(k).filter(i=>i.branchId===bid)}};DB.init();
+const DB={stores:['products','sales','users','settings','branches','activityLogs','suppliers','purchaseOrders'],init(){this.stores.forEach(s=>{if(!localStorage.getItem('mlea_'+s))localStorage.setItem('mlea_'+s,'[]')})},getAll(k){return JSON.parse(localStorage.getItem('mlea_'+k)||'[]')},set(k,d){localStorage.setItem('mlea_'+k,JSON.stringify(d))},add(k,item){const items=this.getAll(k);item.id=items.length>0?Math.max(...items.map(i=>i.id))+1:1;item.createdAt=new Date().toISOString();items.push(item);this.set(k,items);return item.id},update(k,item){const items=this.getAll(k);const idx=items.findIndex(i=>i.id===item.id);if(idx!==-1){item.updatedAt=new Date().toISOString();items[idx]=item;this.set(k,items)}},delete(k,id){this.set(k,this.getAll(k).filter(i=>i.id!==id))},getById(k,id){return this.getAll(k).find(i=>i.id===id)},getByBranch(k,bid){return this.getAll(k).filter(i=>i.branchId===bid)}};
+DB.init();
 
 const currencies={PHP:{symbol:'₱',name:'Philippine Peso',flag:'🇵🇭',decimals:2},USD:{symbol:'$',name:'US Dollar',flag:'🇺🇸',decimals:2},EUR:{symbol:'€',name:'Euro',flag:'🇪🇺',decimals:2},GBP:{symbol:'£',name:'British Pound',flag:'🇬🇧',decimals:2},JPY:{symbol:'¥',name:'Japanese Yen',flag:'🇯🇵',decimals:0},SGD:{symbol:'S$',name:'Singapore Dollar',flag:'🇸🇬',decimals:2},AED:{symbol:'د.إ',name:'UAE Dirham',flag:'🇦🇪',decimals:2}};
 let currentUser=null,currentView='dashboard',currentCurrency='PHP',taxRate=0.12,cart=[],selectedUserId=null,pinEntry='',users=[],branches=[],products=[],downloadPath='MLEA_Backups';
-function formatCurrency(a){const c=currencies[currentCurrency];return c.symbol+(c.decimals===0?Math.round(a).toLocaleString():a.toFixed(2))}
+function fc(a){const c=currencies[currentCurrency];return c.symbol+(c.decimals===0?Math.round(a).toLocaleString():a.toFixed(2))}
+function formatCurrency(a){return fc(a)}
 function getMyData(key){const all=DB.getAll(key);if(currentUser&&currentUser.role==='admin')return all;if(currentUser&&currentUser.branchId)return all.filter(i=>i.branchId===currentUser.branchId);return all.filter(i=>!i.branchId)}
 function logActivity(action,details){if(!currentUser)return;DB.add('activityLogs',{userId:currentUser.id,userName:currentUser.name,userRole:currentUser.role,branchId:currentUser.branchId,action,details,timestamp:new Date().toISOString()})}
 
@@ -155,77 +359,186 @@ function initApp(){
   if(branches.length===0){DB.add('branches',{name:'Main Branch',address:'Head Office',phone:'555-0000'});branches=DB.getAll('branches')}
   if(users.length===0){DB.add('users',{name:'Admin',role:'admin',active:true,pin:'1234',branchId:null});users=DB.getAll('users')}
   if(products.length===0){DB.add('products',{sku:'SKU001',name:'Sample Product',price:99.99,cost:50,stock:50,category:'General',active:true,barcode:'123456789',branchId:null,supplierId:null});products=DB.getAll('products')}
-  if(DB.getAll('suppliers').length===0){DB.add('suppliers',{name:'Sample Supplier',contact:'John Doe',phone:'555-0001',email:'supplier@email.com',address:'123 Supplier St'});}
+  if(DB.getAll('suppliers').length===0){DB.add('suppliers',{name:'Sample Supplier',contact:'John Doe',phone:'555-0001',email:'supplier@email.com',address:'123 Supplier St'})}
   DB.getAll('settings').forEach(s=>{if(s.key==='currency')currentCurrency=s.value;if(s.key==='taxRate')taxRate=parseFloat(s.value)||0.12;if(s.key==='downloadPath')downloadPath=s.value});
   renderLoginScreen();
 }
 
 // ═══════════════════ LOGIN ═══════════════════
-function renderLoginScreen(){document.getElementById('loginScreen').style.display='flex';document.getElementById('mainApp').style.display='none';users=DB.getAll('users');document.getElementById('userSelector').innerHTML=users.filter(u=>u.active).map(u=>`<div class="user-card ${selectedUserId===u.id?'selected':''}" onclick="selectUser(${u.id})"><div class="avatar">${u.role==='admin'?'👑':u.role==='manager'?'👨‍💼':'👤'}</div><div class="name">${u.name}</div><span class="role-badge ${u.role}-badge">${u.role}</span></div>`).join('');pinEntry='';updatePinDisplay();document.getElementById('errorMessage').textContent=''}
+function renderLoginScreen(){
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('mainApp').style.display='none';
+  users=DB.getAll('users');
+  document.getElementById('userSelector').innerHTML=users.filter(u=>u.active).map(u=>`<div class="user-card ${selectedUserId===u.id?'selected':''}" onclick="selectUser(${u.id})"><span class="avatar">${u.role==='admin'?'👑':u.role==='manager'?'🎯':'👤'}</span><div class="name">${u.name}</div><span class="role-badge ${u.role}-badge">${u.role}</span></div>`).join('');
+  pinEntry='';updatePinDisplay();document.getElementById('errorMessage').textContent='';
+}
 function selectUser(id){selectedUserId=id;pinEntry='';updatePinDisplay();renderLoginScreen()}
-function enterPin(d){if(!selectedUserId){document.getElementById('errorMessage').textContent='Select a user first';return}if(pinEntry.length<4){pinEntry+=d;updatePinDisplay();if(pinEntry.length===4)setTimeout(submitPin,150)}}
+function enterPin(d){if(!selectedUserId){document.getElementById('errorMessage').textContent='Select a user first';return}if(pinEntry.length<4){pinEntry+=d;updatePinDisplay();if(pinEntry.length===4)setTimeout(submitPin,180)}}
 function clearPin(){pinEntry='';updatePinDisplay();document.getElementById('errorMessage').textContent=''}
 function updatePinDisplay(){document.querySelectorAll('.pin-dot').forEach((d,i)=>{d.classList.toggle('filled',i<pinEntry.length);d.classList.remove('error')})}
 function submitPin(){
   if(!selectedUserId)return;users=DB.getAll('users');const user=users.find(u=>u.id===selectedUserId);
-  if(!user||!user.active){document.getElementById('errorMessage').textContent=!user?'User not found!':'Account deactivated!';pinEntry='';updatePinDisplay();return}
-  if(user.pin===pinEntry){currentUser=user;document.getElementById('loginScreen').style.display='none';document.getElementById('mainApp').style.display='block';document.getElementById('headerUser').textContent=user.name;
-    if(user.branchId){const b=DB.getById('branches',user.branchId);document.getElementById('headerBranch').innerHTML='<span class="branch-indicator">🏢 '+(b?b.name:'Branch')+'</span>';document.getElementById('headerTitle').textContent=(b?b.name:'Branch')+' POS'}
-    else{document.getElementById('headerBranch').innerHTML='<span class="admin-indicator">👑 Admin</span>';document.getElementById('headerTitle').textContent='MLEA HQ Admin'}
-    renderSidebar();pinEntry='';selectedUserId=null;updatePinDisplay();document.getElementById('errorMessage').textContent='';switchView('dashboard')}
-  else{document.getElementById('errorMessage').textContent='Wrong PIN!';pinEntry='';updatePinDisplay();document.querySelectorAll('.pin-dot').forEach(d=>d.classList.add('error'));setTimeout(()=>document.querySelectorAll('.pin-dot').forEach(d=>d.classList.remove('error')),400)}
+  if(!user||!user.active){document.getElementById('errorMessage').textContent=!user?'User not found':'Account deactivated';pinEntry='';updatePinDisplay();return}
+  if(user.pin===pinEntry){
+    currentUser=user;
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('mainApp').style.display='block';
+    const b=user.branchId?DB.getById('branches',user.branchId):null;
+    document.getElementById('headerBranch').innerHTML=user.branchId?`<span class="branch-indicator">🏢 ${b?b.name:'Branch'}</span>`:`<span class="admin-indicator">👑 Admin</span>`;
+    document.getElementById('headerTitle').textContent=user.branchId?(b?b.name:'Branch')+' POS':'MLEA Headquarters';
+    renderSidebar();pinEntry='';selectedUserId=null;updatePinDisplay();document.getElementById('errorMessage').textContent='';switchView('dashboard');
+  } else {
+    document.getElementById('errorMessage').textContent='Incorrect PIN';pinEntry='';updatePinDisplay();
+    document.querySelectorAll('.pin-dot').forEach(d=>d.classList.add('error'));
+    setTimeout(()=>document.querySelectorAll('.pin-dot').forEach(d=>d.classList.remove('error')),500);
+  }
 }
 
 // ═══════════════════ SIDEBAR ═══════════════════
-function renderSidebar(){const nav=document.getElementById('sidebarNav');if(!currentUser)return;const low=getMyData('products').filter(p=>p.active&&p.stock<10).length;
-  if(currentUser.role==='admin'){nav.innerHTML=`<div class="sidebar-section-title">Main</div><div class="sidebar-nav-item active" onclick="switchView('dashboard')"><span class="sidebar-nav-icon">📊</span>Dashboard</div><div class="sidebar-section-title">Management</div><div class="sidebar-nav-item" onclick="switchView('branches')"><span class="sidebar-nav-icon">🏢</span>Branches</div><div class="sidebar-nav-item" onclick="switchView('suppliers')"><span class="sidebar-nav-icon">🚚</span>Suppliers</div><div class="sidebar-nav-item" onclick="switchView('allProducts')"><span class="sidebar-nav-icon">📦</span>Products</div><div class="sidebar-nav-item" onclick="switchView('purchaseOrders')"><span class="sidebar-nav-icon">📋</span>Purchase Orders</div><div class="sidebar-nav-item" onclick="switchView('allUsers')"><span class="sidebar-nav-icon">👥</span>Users</div><div class="sidebar-nav-item" onclick="switchView('allSales')"><span class="sidebar-nav-icon">💰</span>Sales</div><div class="sidebar-section-title">Reports & Backup</div><div class="sidebar-nav-item" onclick="switchView('reports')"><span class="sidebar-nav-icon">📈</span>Reports</div><div class="sidebar-nav-item" onclick="switchView('downloadManager')"><span class="sidebar-nav-icon">📁</span>Backup & Sync</div><div class="sidebar-section-title">Settings</div><div class="sidebar-nav-item" onclick="switchView('settings')"><span class="sidebar-nav-icon">⚙️</span>Settings</div>`}
-  else if(currentUser.role==='manager'){nav.innerHTML=`<div class="sidebar-section-title">Main</div><div class="sidebar-nav-item active" onclick="switchView('dashboard')"><span class="sidebar-nav-icon">📊</span>Dashboard</div><div class="sidebar-nav-item" onclick="switchView('pos')"><span class="sidebar-nav-icon">💻</span>POS Terminal</div><div class="sidebar-section-title">Management</div><div class="sidebar-nav-item" onclick="switchView('inventory')"><span class="sidebar-nav-icon">📦</span>Products${low>0?` <span style="color:#ffa502;">(${low})</span>`:''}</div><div class="sidebar-nav-item" onclick="switchView('suppliers')"><span class="sidebar-nav-icon">🚚</span>Suppliers</div><div class="sidebar-nav-item" onclick="switchView('purchaseOrders')"><span class="sidebar-nav-icon">📋</span>Purchase Orders</div><div class="sidebar-nav-item" onclick="switchView('myUsers')"><span class="sidebar-nav-icon">👥</span>Cashiers</div><div class="sidebar-nav-item" onclick="switchView('branchSales')"><span class="sidebar-nav-icon">💰</span>Sales</div><div class="sidebar-section-title">Reports & Backup</div><div class="sidebar-nav-item" onclick="switchView('reports')"><span class="sidebar-nav-icon">📈</span>Reports</div><div class="sidebar-nav-item" onclick="switchView('downloadManager')"><span class="sidebar-nav-icon">📁</span>Backup & Sync</div><div class="sidebar-section-title">Settings</div><div class="sidebar-nav-item" onclick="switchView('settings')"><span class="sidebar-nav-icon">⚙️</span>Settings</div>`}
-  else{nav.innerHTML=`<div class="sidebar-section-title">Main</div><div class="sidebar-nav-item active" onclick="switchView('dashboard')"><span class="sidebar-nav-icon">📊</span>Dashboard</div><div class="sidebar-nav-item" onclick="switchView('pos')"><span class="sidebar-nav-icon">💻</span>POS Terminal</div>`}}
+function renderSidebar(){
+  const nav=document.getElementById('sidebarNav');if(!currentUser)return;
+  const low=getMyData('products').filter(p=>p.active&&p.stock<10).length;
+  if(currentUser.role==='admin'){nav.innerHTML=`<div class="sidebar-section-title">Main</div><div class="sidebar-nav-item active" onclick="switchView('dashboard')"><span class="sidebar-nav-icon">📊</span>Dashboard</div><div class="sidebar-section-title">Management</div><div class="sidebar-nav-item" onclick="switchView('branches')"><span class="sidebar-nav-icon">🏢</span>Branches</div><div class="sidebar-nav-item" onclick="switchView('suppliers')"><span class="sidebar-nav-icon">🚚</span>Suppliers</div><div class="sidebar-nav-item" onclick="switchView('allProducts')"><span class="sidebar-nav-icon">📦</span>Products</div><div class="sidebar-nav-item" onclick="switchView('purchaseOrders')"><span class="sidebar-nav-icon">📋</span>Purchase Orders</div><div class="sidebar-nav-item" onclick="switchView('allUsers')"><span class="sidebar-nav-icon">👥</span>Users</div><div class="sidebar-nav-item" onclick="switchView('allSales')"><span class="sidebar-nav-icon">💰</span>Sales</div><div class="sidebar-section-title">Reports</div><div class="sidebar-nav-item" onclick="switchView('reports')"><span class="sidebar-nav-icon">📈</span>Reports</div><div class="sidebar-nav-item" onclick="switchView('downloadManager')"><span class="sidebar-nav-icon">📁</span>Backup & Sync</div><div class="sidebar-section-title">Settings</div><div class="sidebar-nav-item" onclick="switchView('settings')"><span class="sidebar-nav-icon">⚙️</span>Settings</div>`}
+  else if(currentUser.role==='manager'){nav.innerHTML=`<div class="sidebar-section-title">Main</div><div class="sidebar-nav-item active" onclick="switchView('dashboard')"><span class="sidebar-nav-icon">📊</span>Dashboard</div><div class="sidebar-nav-item" onclick="switchView('pos')"><span class="sidebar-nav-icon">💳</span>POS Terminal</div><div class="sidebar-section-title">Management</div><div class="sidebar-nav-item" onclick="switchView('inventory')"><span class="sidebar-nav-icon">📦</span>Products${low>0?` <span style="color:var(--accent-rose);font-size:.75em;">(${low} low)</span>`:''}</div><div class="sidebar-nav-item" onclick="switchView('suppliers')"><span class="sidebar-nav-icon">🚚</span>Suppliers</div><div class="sidebar-nav-item" onclick="switchView('purchaseOrders')"><span class="sidebar-nav-icon">📋</span>Purchase Orders</div><div class="sidebar-nav-item" onclick="switchView('myUsers')"><span class="sidebar-nav-icon">👥</span>Cashiers</div><div class="sidebar-nav-item" onclick="switchView('branchSales')"><span class="sidebar-nav-icon">💰</span>Sales</div><div class="sidebar-section-title">Reports</div><div class="sidebar-nav-item" onclick="switchView('reports')"><span class="sidebar-nav-icon">📈</span>Reports</div><div class="sidebar-nav-item" onclick="switchView('downloadManager')"><span class="sidebar-nav-icon">📁</span>Backup & Sync</div><div class="sidebar-section-title">Settings</div><div class="sidebar-nav-item" onclick="switchView('settings')"><span class="sidebar-nav-icon">⚙️</span>Settings</div>`}
+  else{nav.innerHTML=`<div class="sidebar-section-title">Main</div><div class="sidebar-nav-item active" onclick="switchView('dashboard')"><span class="sidebar-nav-icon">📊</span>Dashboard</div><div class="sidebar-nav-item" onclick="switchView('pos')"><span class="sidebar-nav-icon">💳</span>POS Terminal</div>`}
+}
 function logout(){currentUser=null;cart=[];document.getElementById('mainApp').style.display='none';closeSidebar();renderLoginScreen()}
 function openSidebar(){document.getElementById('sidebar').classList.add('active');document.getElementById('sidebarOverlay').classList.add('active')}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('active');document.getElementById('sidebarOverlay').classList.remove('active')}
 
 // ═══════════════════ VIEW SWITCHER ═══════════════════
-function switchView(view){currentView=view;closeSidebar();const el=document.getElementById('mainContent');
-  switch(view){case 'dashboard':renderDashboard(el);break;case 'pos':renderPOS(el);break;case 'branches':renderBranches(el);break;case 'suppliers':renderSuppliers(el);break;case 'purchaseOrders':renderPurchaseOrders(el);break;case 'allProducts':case 'inventory':renderProducts(el);break;case 'allUsers':case 'myUsers':renderUsers(el);break;case 'allSales':case 'branchSales':renderSales(el);break;case 'settings':renderSettings(el);break;case 'reports':renderReports(el);break;case 'downloadManager':renderDownloadManager(el);break;default:renderDashboard(el)}}
+function switchView(view){
+  currentView=view;closeSidebar();
+  const el=document.getElementById('mainContent');
+  el.style.opacity='0';el.style.transform='translateY(8px)';
+  setTimeout(()=>{
+    switch(view){case 'dashboard':renderDashboard(el);break;case 'pos':renderPOS(el);break;case 'branches':renderBranches(el);break;case 'suppliers':renderSuppliers(el);break;case 'purchaseOrders':renderPurchaseOrders(el);break;case 'allProducts':case 'inventory':renderProducts(el);break;case 'allUsers':case 'myUsers':renderUsers(el);break;case 'allSales':case 'branchSales':renderSales(el);break;case 'settings':renderSettings(el);break;case 'reports':renderReports(el);break;case 'downloadManager':renderDownloadManager(el);break;default:renderDashboard(el)}
+    el.style.transition='all .25s ease';el.style.opacity='1';el.style.transform='translateY(0)';
+  },80);
+  document.querySelectorAll('.sidebar-nav-item').forEach(i=>i.classList.remove('active'));
+  document.querySelectorAll('.sidebar-nav-item').forEach(i=>{if(i.textContent.trim().toLowerCase().includes(view.replace('allProducts','products').replace('allUsers','users').replace('allSales','sales').replace('branchSales','sales').replace('myUsers','cashiers').replace('inventory','products').substring(0,6).toLowerCase()))i.classList.add('active')});
+}
 
 // ═══════════════════ DASHBOARD ═══════════════════
-function renderDashboard(el){const today=new Date().toISOString().split('T')[0],thisMonth=today.substring(0,7);const mySales=getMyData('sales'),myProducts=getMyData('products');const todaySales=mySales.filter(s=>s.date===today).reduce((s,i)=>s+i.total,0),todayCount=mySales.filter(s=>s.date===today).length,monthSales=mySales.filter(s=>s.date.startsWith(thisMonth)).reduce((s,i)=>s+i.total,0);const totalCost=myProducts.reduce((s,p)=>s+(p.cost||0)*p.stock,0);const totalValue=myProducts.reduce((s,p)=>s+p.price*p.stock,0);const hour=new Date().getHours(),greeting=hour<12?'Good Morning':hour<17?'Good Afternoon':'Good Evening';el.innerHTML=`<div class="card" style="border-left:4px solid ${currentUser.role==='admin'?'#7c6fff':'#2ed573'};"><h3>${greeting}, ${currentUser.name}!</h3><p style="color:#a0a0b0;">${currentUser.role==='admin'?'👑 Admin Overview':currentUser.role==='manager'?'👨‍💼 Manager Dashboard':'👤 Cashier View'}</p></div><div class="metrics"><div class="metric-card"><div class="metric-value">${formatCurrency(todaySales)}</div><div class="metric-label">Today's Sales</div></div><div class="metric-card"><div class="metric-value">${todayCount}</div><div class="metric-label">Transactions</div></div></div><div class="metrics"><div class="metric-card"><div class="metric-value">${formatCurrency(monthSales)}</div><div class="metric-label">Monthly Revenue</div></div><div class="metric-card"><div class="metric-value">${myProducts.filter(p=>p.active).length}</div><div class="metric-label">Active Products</div></div></div><div class="metrics"><div class="metric-card"><div class="metric-value">${formatCurrency(totalCost)}</div><div class="metric-label">Inventory Cost</div></div><div class="metric-card"><div class="metric-value">${formatCurrency(totalValue-totalCost)}</div><div class="metric-label">Potential Profit</div></div></div><button class="btn btn-primary btn-block" onclick="switchView('pos')" style="font-size:1.1em;padding:15px;">🛒 Start New Sale</button>${currentUser.role!=='cashier'?`<button class="btn btn-success btn-block" onclick="switchView('reports')">📈 View Reports</button>`:''}`}
+function renderDashboard(el){
+  const today=new Date().toISOString().split('T')[0],thisMonth=today.substring(0,7);
+  const mySales=getMyData('sales'),myProducts=getMyData('products');
+  const todaySales=mySales.filter(s=>s.date===today).reduce((s,i)=>s+i.total,0);
+  const todayCount=mySales.filter(s=>s.date===today).length;
+  const monthSales=mySales.filter(s=>s.date.startsWith(thisMonth)).reduce((s,i)=>s+i.total,0);
+  const totalCost=myProducts.reduce((s,p)=>s+(p.cost||0)*p.stock,0);
+  const totalValue=myProducts.reduce((s,p)=>s+p.price*p.stock,0);
+  const hour=new Date().getHours(),greeting=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
+  const roleColor=currentUser.role==='admin'?'var(--accent-gold)':currentUser.role==='manager'?'var(--accent-emerald)':'var(--accent-blue)';
+  el.innerHTML=`
+    <div class="welcome-card">
+      <p style="color:var(--text-muted);font-size:.75em;margin-bottom:4px;font-family:var(--font-display);letter-spacing:.06em;text-transform:uppercase;">${greeting}</p>
+      <h3>${currentUser.name}</h3>
+      <p style="color:var(--text-secondary);font-size:.82em;">${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</p>
+      <span class="role-chip" style="background:rgba(0,0,0,0.3);color:${roleColor};border:1px solid ${roleColor}30;">
+        ${currentUser.role==='admin'?'👑 Administrator':currentUser.role==='manager'?'🎯 Manager':'👤 Cashier'}
+      </span>
+    </div>
+    <div class="metrics">
+      <div class="metric-card"><div class="metric-value">${formatCurrency(todaySales)}</div><div class="metric-label">Today's Sales</div></div>
+      <div class="metric-card"><div class="metric-value">${todayCount}</div><div class="metric-label">Transactions</div></div>
+    </div>
+    <div class="metrics" style="margin-top:8px;">
+      <div class="metric-card"><div class="metric-value">${formatCurrency(monthSales)}</div><div class="metric-label">Monthly Revenue</div></div>
+      <div class="metric-card"><div class="metric-value">${myProducts.filter(p=>p.active).length}</div><div class="metric-label">Active Products</div></div>
+    </div>
+    <div class="metrics" style="margin-top:8px;">
+      <div class="metric-card"><div class="metric-value" style="color:var(--accent-rose);">${formatCurrency(totalCost)}</div><div class="metric-label">Inventory Cost</div></div>
+      <div class="metric-card"><div class="metric-value" style="color:var(--accent-emerald);">${formatCurrency(totalValue-totalCost)}</div><div class="metric-label">Potential Profit</div></div>
+    </div>
+    <div style="margin-top:14px;">
+      <button class="btn btn-primary btn-block" onclick="switchView('pos')" style="font-size:1em;padding:16px;letter-spacing:.05em;">💳 Start New Sale</button>
+      ${currentUser.role!=='cashier'?`<button class="btn btn-success btn-block" onclick="switchView('reports')">📈 View Reports</button>`:''}
+    </div>`;
+}
 
-// ═══════════════════ POS WITH BARCODE ═══════════════════
-function renderPOS(el){const myProducts=getMyData('products').filter(p=>p.active);const subtotal=cart.reduce((s,i)=>s+(i.price*i.quantity),0),total=subtotal+(subtotal*taxRate);el.innerHTML=`<div style="margin-bottom:12px;"><input type="text" id="scanInput" placeholder="📷 Scan barcode or type SKU..." style="font-size:1em;padding:14px;text-align:center;border:2px solid #2ed573;background:#0f3460;" onkeypress="if(event.key==='Enter'){addToCart(event.target.value);event.target.value='';}"><small style="color:#2ed573;display:block;text-align:center;margin-top:4px;">Scanner Ready — Point & Scan</small></div><div class="product-grid">${myProducts.slice(0,8).map(p=>`<div class="product-card" onclick="addToCart('${p.sku}')"><strong>${p.name}</strong><div style="color:#9b8fff;">${formatCurrency(p.price)}</div><small>Stock: ${p.stock} ${p.barcode?'📷':''}</small></div>`).join('')}</div><div class="card"><h4>🛒 Cart (${cart.length})</h4>${cart.map((item,i)=>`<div class="cart-item"><span>${item.name} x${item.quantity}</span><span>${formatCurrency(item.price*item.quantity)}</span><button class="btn btn-danger btn-xs" onclick="removeFromCart(${i})">✕</button></div>`).join('')||'<p style="color:#a0a0b0;">Empty — Scan barcode or tap product</p>'}<hr style="border-color:#2a3a5e;"><div style="font-size:1.3em;text-align:right;"><strong>Total: <span style="color:#9b8fff;">${formatCurrency(total)}</span></strong></div>${cart.length>0?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;"><button class="btn btn-success" onclick="processPayment('cash')">💵 Cash</button><button class="btn btn-primary" onclick="processPayment('card')">💳 Card</button></div>`:''}</div>`;setTimeout(()=>{const si=document.getElementById('scanInput');if(si)si.focus()},100)}
+// ═══════════════════ POS ═══════════════════
+function renderPOS(el){
+  const myProducts=getMyData('products').filter(p=>p.active);
+  const subtotal=cart.reduce((s,i)=>s+(i.price*i.quantity),0),total=subtotal+(subtotal*taxRate);
+  el.innerHTML=`
+    <div class="scan-input-wrap"><input type="text" id="scanInput" placeholder="Scan barcode or enter SKU…" onkeypress="if(event.key==='Enter'){addToCart(event.target.value);event.target.value='';}"></div>
+    <div class="scan-hint">⚡ Scanner Ready — Point & Scan</div>
+    <div class="product-grid" style="margin-top:12px;">${myProducts.slice(0,8).map(p=>`<div class="product-card" onclick="addToCart('${p.sku}')"><strong>${p.name}</strong><div class="price">${formatCurrency(p.price)}</div><small>Stock: ${p.stock}${p.barcode?' 📷':''}</small></div>`).join('')}</div>
+    <div class="card" style="margin-top:4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <h4 style="margin-bottom:0;">Cart</h4>
+        <span style="font-size:.75em;color:var(--text-muted);">${cart.length} item${cart.length!==1?'s':''}</span>
+      </div>
+      ${cart.map((item,i)=>`<div class="cart-item"><div style="flex:1;min-width:0;"><div style="font-size:.85em;font-weight:500;">${item.name}</div><div style="font-size:.72em;color:var(--text-muted);">×${item.quantity} @ ${formatCurrency(item.price)}</div></div><div style="font-family:var(--font-display);color:var(--accent-gold);font-weight:700;font-size:.9em;">${formatCurrency(item.price*item.quantity)}</div><button class="btn btn-danger btn-xs" onclick="removeFromCart(${i})" style="margin-left:8px;">✕</button></div>`).join('')||'<div class="empty-state" style="padding:25px 10px;"><div class="empty-icon">🛒</div><p>Cart is empty</p></div>'}
+      ${cart.length>0?`<div class="divider"></div><div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 12px;"><span style="color:var(--text-muted);font-size:.82em;">Subtotal</span><span style="font-size:.9em;">${formatCurrency(subtotal)}</span></div><div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;"><span style="color:var(--text-muted);font-size:.82em;">Tax (${(taxRate*100).toFixed(0)}%)</span><span style="font-size:.9em;">${formatCurrency(subtotal*taxRate)}</span></div><div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;"><span style="font-family:var(--font-display);font-weight:700;">Total</span><span style="font-family:var(--font-display);font-size:1.35em;font-weight:800;color:var(--accent-gold);">${formatCurrency(total)}</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><button class="btn btn-success" onclick="processPayment('cash')">💵 Cash</button><button class="btn btn-primary" onclick="processPayment('card')">💳 Card</button></div>`:''}
+    </div>`;
+  setTimeout(()=>{const si=document.getElementById('scanInput');if(si)si.focus()},100);
+}
 function addToCart(sku){const p=getMyData('products').find(p=>(p.sku===sku||p.barcode===sku)&&p.active);if(p&&p.stock>0){const e=cart.find(i=>i.sku===p.sku);e?e.quantity++:cart.push({...p,quantity:1});switchView('pos')}else{alert('Product not found or out of stock!')}}
 function removeFromCart(i){cart.splice(i,1);switchView('pos')}
-function processPayment(method){if(cart.length===0){alert('Cart empty!');return}const subtotal=cart.reduce((s,i)=>s+(i.price*i.quantity),0),total=subtotal+(subtotal*taxRate);const sale={date:new Date().toISOString().split('T')[0],total,subtotal,tax:subtotal*taxRate,paymentMethod:method,cashierId:currentUser.id,cashierName:currentUser.name,branchId:currentUser.branchId,currency:currentCurrency,items:cart.map(i=>({productId:i.id,name:i.name,quantity:i.quantity,price:i.price,cost:i.cost}))};const saleId=DB.add('sales',sale);cart.forEach(item=>{const p=DB.getById('products',item.id);if(p){p.stock-=item.quantity;DB.update('products',p)}});logActivity('Sale','#'+saleId+': '+formatCurrency(total));document.getElementById('modalContent').innerHTML=`<div style="text-align:center;"><h3 style="color:#2ed573;">✅ Sale Complete!</h3><h2>${formatCurrency(total)}</h2><p>Receipt #${saleId} | ${method.toUpperCase()}</p></div>`;document.getElementById('modal').classList.add('active');cart=[];setTimeout(()=>{document.getElementById('modal').classList.remove('active');switchView('dashboard')},2500)}
+function processPayment(method){
+  if(cart.length===0){alert('Cart is empty!');return}
+  const subtotal=cart.reduce((s,i)=>s+(i.price*i.quantity),0),total=subtotal+(subtotal*taxRate);
+  const sale={date:new Date().toISOString().split('T')[0],total,subtotal,tax:subtotal*taxRate,paymentMethod:method,cashierId:currentUser.id,cashierName:currentUser.name,branchId:currentUser.branchId,currency:currentCurrency,items:cart.map(i=>({productId:i.id,name:i.name,quantity:i.quantity,price:i.price,cost:i.cost}))};
+  const saleId=DB.add('sales',sale);
+  cart.forEach(item=>{const p=DB.getById('products',item.id);if(p){p.stock-=item.quantity;DB.update('products',p)}});
+  logActivity('Sale','#'+saleId+': '+formatCurrency(total));
+  document.getElementById('modalContent').innerHTML=`<div class="sale-complete"><div class="check-circle">✓</div><h3>Sale Complete</h3><div class="amount">${formatCurrency(total)}</div><small>Receipt #${saleId} · ${method.toUpperCase()}</small></div>`;
+  document.getElementById('modal').classList.add('active');
+  cart=[];setTimeout(()=>{document.getElementById('modal').classList.remove('active');switchView('dashboard')},2500);
+}
 
 // ═══════════════════ BRANCHES ═══════════════════
-function renderBranches(el){if(currentUser.role!=='admin'){el.innerHTML='<p class="empty-state">🔒 Admin only</p>';return}branches=DB.getAll('branches');el.innerHTML=`<h4>🏢 Branch Management</h4><button class="btn btn-primary btn-block" onclick="showModal('addBranch')">+ Add Branch</button>${branches.map(b=>{const bUsers=DB.getByBranch('users',b.id);return`<div class="card"><strong>${b.name}</strong><p style="color:#a0a0b0;font-size:.8em;">${b.address||'No address'} | ${b.phone||'No phone'} | ${bUsers.length} users</p><button class="btn btn-success btn-xs" onclick="addBranchUser(${b.id})">+ User</button><button class="btn btn-danger btn-xs" onclick="if(confirm('Delete?')){DB.delete('branches',${b.id});switchView('branches')}">🗑️</button></div>`}).join('')}`}
+function renderBranches(el){
+  if(currentUser.role!=='admin'){el.innerHTML='<div class="empty-state"><div class="empty-icon">🔒</div><p>Admin access only</p></div>';return}
+  branches=DB.getAll('branches');
+  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><h4 style="margin:0;">Branches</h4><button class="btn btn-primary btn-sm" onclick="showModal('addBranch')">+ Add Branch</button></div>${branches.map(b=>{const bUsers=DB.getByBranch('users',b.id);return`<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><strong style="font-family:var(--font-display);">${b.name}</strong><p style="color:var(--text-muted);font-size:.78em;margin-top:4px;">${b.address||'No address'}</p><p style="color:var(--text-muted);font-size:.75em;">${b.phone||'No phone'} · ${bUsers.length} user${bUsers.length!==1?'s':''}</p></div><div style="display:flex;gap:6px;flex-shrink:0;"><button class="btn btn-success btn-xs" onclick="addBranchUser(${b.id})">+ User</button><button class="btn btn-danger btn-xs" onclick="if(confirm('Delete branch?')){DB.delete('branches',${b.id});switchView('branches')}">🗑</button></div></div></div>`}).join('')}`
+}
 function addBranch(){const name=document.getElementById('modalInput1').value;if(name){DB.add('branches',{name,address:document.getElementById('modalInput2').value||'',phone:document.getElementById('modalInput3').value||''});closeModal();switchView('branches')}}
 function addBranchUser(bid){const name=prompt('User name:');if(name){const pin=prompt('4-digit PIN:');if(pin&&pin.length===4){const role=prompt('Role (manager/cashier):')||'cashier';DB.add('users',{name,role,active:true,pin,branchId:bid});switchView('branches');renderLoginScreen()}}}
 
 // ═══════════════════ PRODUCTS ═══════════════════
-function renderProducts(el){const prods=currentView==='allProducts'?DB.getAll('products'):getMyData('products');const suppliers=DB.getAll('suppliers');el.innerHTML=`<h4>📦 Products</h4><button class="btn btn-primary btn-block" onclick="showModal('addProduct')">+ Add Product</button><div style="overflow-x:auto;"><table><thead><tr><th>Name</th><th>Price</th><th>Cost</th><th>Stock</th><th>Category</th><th>Barcode</th><th>Supplier</th><th>Actions</th></tr></thead><tbody>${prods.map(p=>{const s=p.supplierId?suppliers.find(sp=>sp.id===p.supplierId):null;return`<tr><td>${p.name}</td><td>${formatCurrency(p.price)}</td><td style="color:#ffa502;">${formatCurrency(p.cost||0)}</td><td class="${p.stock<10?'stock-low':''}">${p.stock}</td><td>${p.category||'-'}</td><td style="font-size:.65em;">${p.barcode||'-'}</td><td>${s?s.name:'-'}</td><td style="white-space:nowrap;"><button class="btn btn-success btn-xs" onclick="adjustStock(${p.id})">+</button><button class="btn btn-warning btn-xs" onclick="showModal('editProduct',${p.id})">✎</button><button class="btn btn-danger btn-xs" onclick="if(confirm('Delete?')){DB.delete('products',${p.id});switchView(currentView)}">🗑️</button></td></tr>`}).join('')}</tbody></table></div>${prods.length===0?'<p class="empty-state">No products</p>':''}`}
-function addProduct(){const name=document.getElementById('modalInput1').value;const price=parseFloat(document.getElementById('modalInput2').value);if(!name||isNaN(price)){alert('Name and price required!');return}DB.add('products',{sku:'SKU'+Date.now(),name,price,cost:parseFloat(document.getElementById('modalInput3').value)||0,stock:parseInt(document.getElementById('modalInput4').value)||0,category:document.getElementById('modalInput5').value||'General',active:true,barcode:document.getElementById('modalInput6').value||'',branchId:currentUser.branchId,supplierId:document.getElementById('modalSelect').value?parseInt(document.getElementById('modalSelect').value):null});closeModal();switchView(currentView)}
+function renderProducts(el){
+  const prods=currentView==='allProducts'?DB.getAll('products'):getMyData('products');
+  const suppliers=DB.getAll('suppliers');
+  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><h4 style="margin:0;">Products</h4><button class="btn btn-primary btn-sm" onclick="showModal('addProduct')">+ Add</button></div><div style="overflow-x:auto;"><table><thead><tr><th>Name</th><th>Price</th><th>Cost</th><th>Stock</th><th>Category</th><th>Barcode</th><th>Supplier</th><th></th></tr></thead><tbody>${prods.map(p=>{const s=p.supplierId?suppliers.find(sp=>sp.id===p.supplierId):null;return`<tr><td><strong style="color:var(--text-primary);">${p.name}</strong></td><td style="color:var(--accent-gold);font-family:var(--font-mono);">${formatCurrency(p.price)}</td><td style="font-family:var(--font-mono);">${formatCurrency(p.cost||0)}</td><td class="${p.stock<10?'stock-low':''}">${p.stock}</td><td>${p.category||'—'}</td><td style="font-family:var(--font-mono);font-size:.7em;">${p.barcode||'—'}</td><td>${s?s.name:'—'}</td><td style="white-space:nowrap;"><button class="btn btn-success btn-xs" onclick="adjustStock(${p.id})">+</button> <button class="btn btn-warning btn-xs" onclick="showModal('editProduct',${p.id})">✎</button> <button class="btn btn-danger btn-xs" onclick="if(confirm('Delete?')){DB.delete('products',${p.id});switchView(currentView)}">🗑</button></td></tr>`}).join('')}</tbody></table></div>${prods.length===0?'<div class="empty-state"><div class="empty-icon">📦</div><p>No products yet</p></div>':''}`
+}
+function addProduct(){const name=document.getElementById('modalInput1').value,price=parseFloat(document.getElementById('modalInput2').value);if(!name||isNaN(price)){alert('Name and price required');return}DB.add('products',{sku:'SKU'+Date.now(),name,price,cost:parseFloat(document.getElementById('modalInput3').value)||0,stock:parseInt(document.getElementById('modalInput4').value)||0,category:document.getElementById('modalInput5').value||'General',active:true,barcode:document.getElementById('modalInput6').value||'',branchId:currentUser.branchId,supplierId:document.getElementById('modalSelect').value?parseInt(document.getElementById('modalSelect').value):null});closeModal();switchView(currentView)}
 function editProduct(id){const p=DB.getById('products',id);if(!p)return;p.name=document.getElementById('modalInput1').value;p.price=parseFloat(document.getElementById('modalInput2').value);p.cost=parseFloat(document.getElementById('modalInput3').value)||0;p.stock=parseInt(document.getElementById('modalInput4').value);p.category=document.getElementById('modalInput5').value;p.barcode=document.getElementById('modalInput6').value||'';p.supplierId=document.getElementById('modalSelect').value?parseInt(document.getElementById('modalSelect').value):null;DB.update('products',p);closeModal();switchView(currentView)}
-function adjustStock(id){const p=DB.getById('products',id);const qty=parseInt(prompt('Adjust stock for '+p.name+'\nCurrent: '+p.stock));if(!isNaN(qty)){p.stock=qty;DB.update('products',p);switchView(currentView)}}
+function adjustStock(id){const p=DB.getById('products',id),qty=parseInt(prompt(`Stock for "${p.name}"\nCurrent: ${p.stock}`));if(!isNaN(qty)){p.stock=qty;DB.update('products',p);switchView(currentView)}}
 
 // ═══════════════════ SUPPLIERS ═══════════════════
-function renderSuppliers(el){const suppliers=DB.getAll('suppliers');el.innerHTML=`<h4>🚚 Suppliers</h4><button class="btn btn-primary btn-block" onclick="showModal('addSupplier')">+ Add Supplier</button>${suppliers.map(s=>`<div class="card"><strong>${s.name}</strong><p style="color:#a0a0b0;font-size:.8em;">📞 ${s.phone||'N/A'} | ✉️ ${s.email||'N/A'} | 📍 ${s.address||'N/A'}</p><button class="btn btn-warning btn-xs" onclick="showModal('editSupplier',${s.id})">✎</button><button class="btn btn-danger btn-xs" onclick="if(confirm('Delete?')){DB.delete('suppliers',${s.id});switchView('suppliers')}">🗑️</button></div>`).join('')}${suppliers.length===0?'<p class="empty-state">No suppliers</p>':''}`}
-function addSupplier(){const name=document.getElementById('modalInput1').value;if(!name){alert('Name required!');return}DB.add('suppliers',{name,contact:document.getElementById('modalInput2').value||'',phone:document.getElementById('modalInput3').value||'',email:document.getElementById('modalInput4').value||'',address:document.getElementById('modalInput5').value||''});closeModal();switchView('suppliers')}
+function renderSuppliers(el){
+  const suppliers=DB.getAll('suppliers');
+  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><h4 style="margin:0;">Suppliers</h4><button class="btn btn-primary btn-sm" onclick="showModal('addSupplier')">+ Add</button></div>${suppliers.map(s=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><strong style="font-family:var(--font-display);">${s.name}</strong>${s.contact?`<p style="font-size:.78em;color:var(--text-muted);margin-top:3px;">👤 ${s.contact}</p>`:''}${s.phone?`<p style="font-size:.75em;color:var(--text-muted);">📞 ${s.phone}</p>`:''}${s.email?`<p style="font-size:.72em;color:var(--text-muted);">✉ ${s.email}</p>`:''}</div><div style="display:flex;gap:6px;"><button class="btn btn-warning btn-xs" onclick="showModal('editSupplier',${s.id})">✎</button><button class="btn btn-danger btn-xs" onclick="if(confirm('Delete?')){DB.delete('suppliers',${s.id});switchView('suppliers')}">🗑</button></div></div></div>`).join('')}${suppliers.length===0?'<div class="empty-state"><div class="empty-icon">🚚</div><p>No suppliers yet</p></div>':''}`
+}
+function addSupplier(){const name=document.getElementById('modalInput1').value;if(!name){alert('Name required');return}DB.add('suppliers',{name,contact:document.getElementById('modalInput2').value||'',phone:document.getElementById('modalInput3').value||'',email:document.getElementById('modalInput4').value||'',address:document.getElementById('modalInput5').value||''});closeModal();switchView('suppliers')}
 function editSupplier(id){const s=DB.getById('suppliers',id);if(!s)return;s.name=document.getElementById('modalInput1').value;s.contact=document.getElementById('modalInput2').value;s.phone=document.getElementById('modalInput3').value;s.email=document.getElementById('modalInput4').value;s.address=document.getElementById('modalInput5').value;DB.update('suppliers',s);closeModal();switchView('suppliers')}
 
 // ═══════════════════ PURCHASE ORDERS ═══════════════════
-function renderPurchaseOrders(el){const pos=currentUser.role==='admin'?DB.getAll('purchaseOrders'):getMyData('purchaseOrders');const suppliers=DB.getAll('suppliers');el.innerHTML=`<h4>📋 Purchase Orders</h4><button class="btn btn-primary btn-block" onclick="showModal('addPO')">+ New Purchase Order</button>${pos.reverse().map(po=>{const s=suppliers.find(sp=>sp.id===po.supplierId);const items=po.items||[];return`<div class="card"><div style="display:flex;justify-content:space-between;"><strong>PO #${po.id}</strong><span style="color:#9b8fff;">${formatCurrency(po.total||0)}</span></div><p style="color:#a0a0b0;font-size:.75em;">Supplier: ${s?s.name:'N/A'} | Date: ${po.date||po.createdAt?.split('T')[0]} | Status: <span style="color:${po.status==='received'?'#2ed573':po.status==='ordered'?'#ffa502':'#a0a0b0'};">${po.status||'draft'}</span></p><small style="color:#a0a0b0;">${items.length} items</small>${po.status!=='received'?`<button class="btn btn-success btn-xs" onclick="receivePO(${po.id})">✅ Receive</button>`:''}<button class="btn btn-danger btn-xs" onclick="if(confirm('Delete?')){DB.delete('purchaseOrders',${po.id});switchView('purchaseOrders')}">🗑️</button></div>`}).join('')}${pos.length===0?'<p class="empty-state">No purchase orders</p>':''}`}
-function addPO(){const supplierId=parseInt(document.getElementById('modalSelect').value);const items=[];const itemName=document.getElementById('modalInput1').value;const itemQty=parseInt(document.getElementById('modalInput2').value)||0;const itemCost=parseFloat(document.getElementById('modalInput3').value)||0;if(itemName&&itemQty>0){items.push({name:itemName,quantity:itemQty,cost:itemCost,total:itemQty*itemCost})}const total=items.reduce((s,i)=>s+i.total,0);DB.add('purchaseOrders',{supplierId,items,total,status:'ordered',date:new Date().toISOString().split('T')[0],branchId:currentUser.branchId});closeModal();switchView('purchaseOrders')}
+function renderPurchaseOrders(el){
+  const pos=currentUser.role==='admin'?DB.getAll('purchaseOrders'):getMyData('purchaseOrders');
+  const suppliers=DB.getAll('suppliers');
+  const statusColor={draft:'var(--text-muted)',ordered:'var(--accent-gold)',received:'var(--accent-emerald)'};
+  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><h4 style="margin:0;">Purchase Orders</h4><button class="btn btn-primary btn-sm" onclick="showModal('addPO')">+ New PO</button></div>${pos.slice().reverse().map(po=>{const s=suppliers.find(sp=>sp.id===po.supplierId);const items=po.items||[];return`<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><strong style="font-family:var(--font-display);">PO #${po.id}</strong><p style="font-size:.76em;color:var(--text-muted);margin-top:3px;">${s?s.name:'N/A'} · ${po.date||po.createdAt?.split('T')[0]}</p><p style="font-size:.72em;margin-top:2px;">${items.length} items</p></div><div style="text-align:right;"><div style="font-family:var(--font-display);color:var(--accent-gold);font-weight:700;">${formatCurrency(po.total||0)}</div><div style="font-size:.7em;color:${statusColor[po.status]||'var(--text-muted)'};font-weight:600;margin-top:4px;font-family:var(--font-display);text-transform:uppercase;letter-spacing:.05em;">${po.status||'draft'}</div></div></div><div style="margin-top:10px;display:flex;gap:6px;">${po.status!=='received'?`<button class="btn btn-success btn-xs" onclick="receivePO(${po.id})">✓ Receive</button>`:''}<button class="btn btn-danger btn-xs" onclick="if(confirm('Delete?')){DB.delete('purchaseOrders',${po.id});switchView('purchaseOrders')}">🗑</button></div></div>`}).join('')}${pos.length===0?'<div class="empty-state"><div class="empty-icon">📋</div><p>No purchase orders</p></div>':''}`
+}
+function addPO(){const supplierId=parseInt(document.getElementById('modalSelect').value),items=[],itemName=document.getElementById('modalInput1').value,itemQty=parseInt(document.getElementById('modalInput2').value)||0,itemCost=parseFloat(document.getElementById('modalInput3').value)||0;if(itemName&&itemQty>0){items.push({name:itemName,quantity:itemQty,cost:itemCost,total:itemQty*itemCost})}const total=items.reduce((s,i)=>s+i.total,0);DB.add('purchaseOrders',{supplierId,items,total,status:'ordered',date:new Date().toISOString().split('T')[0],branchId:currentUser.branchId});closeModal();switchView('purchaseOrders')}
 function receivePO(id){const po=DB.getById('purchaseOrders',id);if(!po)return;po.status='received';DB.update('purchaseOrders',po);(po.items||[]).forEach(item=>{const product=getMyData('products').find(p=>p.name.toLowerCase()===item.name.toLowerCase());if(product){product.stock+=item.quantity;product.cost=item.cost;DB.update('products',product)}});logActivity('PO Received','#'+id);switchView('purchaseOrders')}
 
 // ═══════════════════ USERS ═══════════════════
-function renderUsers(el){const usrs=currentView==='allUsers'?DB.getAll('users'):getMyData('users');el.innerHTML=`<h4>👥 Users</h4><button class="btn btn-primary btn-block" onclick="addUser()">+ Add User</button>${usrs.map(u=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center;"><div><strong>${u.name}</strong> <span class="role-badge ${u.role}-badge">${u.role}</span> ${u.active?'✅':'❌'}</div><div><button class="btn btn-warning btn-xs" onclick="toggleUser(${u.id})">${u.active?'Deact':'Act'}</button><button class="btn btn-danger btn-xs" onclick="if(confirm('Delete?')){DB.delete('users',${u.id});switchView(currentView);renderLoginScreen()}">🗑️</button></div></div>`).join('')}`}
-function addUser(){const name=prompt('Name:');if(name){const pin=prompt('4-digit PIN:');if(pin&&pin.length===4){const role=prompt('Role (admin/manager/cashier):')||'cashier';DB.add('users',{name,role,active:true,pin,branchId:currentUser.branchId});switchView(currentView);renderLoginScreen()}}}
+function renderUsers(el){
+  const usrs=currentView==='allUsers'?DB.getAll('users'):getMyData('users');
+  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><h4 style="margin:0;">Users</h4><button class="btn btn-primary btn-sm" onclick="addUser()">+ Add</button></div>${usrs.map(u=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;align-items:center;gap:10px;"><span style="font-size:1.4em;">${u.role==='admin'?'👑':u.role==='manager'?'🎯':'👤'}</span><div><strong style="font-family:var(--font-display);">${u.name}</strong><div style="margin-top:3px;display:flex;gap:6px;"><span class="role-badge ${u.role}-badge">${u.role}</span>${u.active?'<span style="font-size:.65em;color:var(--accent-emerald);">● Active</span>':'<span style="font-size:.65em;color:var(--accent-rose);">● Inactive</span>'}</div></div></div><div style="display:flex;gap:6px;"><button class="btn btn-warning btn-xs" onclick="toggleUser(${u.id})">${u.active?'Deact.':'Activate'}</button><button class="btn btn-danger btn-xs" onclick="if(confirm('Delete user?')){DB.delete('users',${u.id});switchView(currentView);renderLoginScreen()}">🗑</button></div></div></div>`).join('')}`
+}
+function addUser(){const name=prompt('User name:');if(name){const pin=prompt('4-digit PIN:');if(pin&&pin.length===4){const role=prompt('Role (admin/manager/cashier):')||'cashier';DB.add('users',{name,role,active:true,pin,branchId:currentUser.branchId});switchView(currentView);renderLoginScreen()}}}
 function toggleUser(id){const u=DB.getById('users',id);u.active=!u.active;DB.update('users',u);switchView(currentView);renderLoginScreen()}
 
 // ═══════════════════ SALES ═══════════════════
-function renderSales(el){const sales=(currentView==='allSales'?DB.getAll('sales'):getMyData('sales')).slice(-50).reverse();el.innerHTML=`<h4>💰 Sales History</h4>${sales.length===0?'<p class="empty-state">No sales yet</p>':`<div style="overflow-x:auto;"><table><thead><tr><th>ID</th><th>Date</th><th>Total</th><th>Method</th><th>Cashier</th></tr></thead><tbody>${sales.map(s=>`<tr><td>#${s.id}</td><td>${s.date}</td><td>${formatCurrency(s.total)}</td><td>${s.paymentMethod}</td><td>${s.cashierName||''}</td></tr>`).join('')}</tbody></table></div>`}`}
+function renderSales(el){
+  const sales=(currentView==='allSales'?DB.getAll('sales'):getMyData('sales')).slice(-50).reverse();
+  el.innerHTML=`<h4>Sales History</h4>${sales.length===0?'<div class="empty-state"><div class="empty-icon">💰</div><p>No sales yet</p></div>':`<div style="overflow-x:auto;"><table><thead><tr><th>#</th><th>Date</th><th>Total</th><th>Method</th><th>Cashier</th></tr></thead><tbody>${sales.map(s=>`<tr><td style="font-family:var(--font-mono);color:var(--text-muted);">#${s.id}</td><td>${s.date}</td><td style="font-family:var(--font-display);color:var(--accent-gold);font-weight:700;">${formatCurrency(s.total)}</td><td><span style="background:${s.paymentMethod==='cash'?'var(--accent-emerald-soft)':'var(--accent-blue-soft)'};color:${s.paymentMethod==='cash'?'var(--accent-emerald)':'var(--accent-blue)'};padding:2px 8px;border-radius:10px;font-size:.7em;font-weight:600;">${s.paymentMethod}</span></td><td>${s.cashierName||'—'}</td></tr>`).join('')}</tbody></table></div>`}`
+}
 
 // ═══════════════════ REPORTS ═══════════════════
 function renderReports(el){
@@ -233,57 +546,104 @@ function renderReports(el){
   const allSales=currentUser.role==='admin'?DB.getAll('sales'):getMyData('sales');
   const monthSales=allSales.filter(s=>s.date.startsWith(thisMonth));
   const totalRevenue=monthSales.reduce((s,i)=>s+i.total,0);
-  const totalTax=monthSales.reduce((s,i)=>s+i.tax||0,0);
+  const totalTax=monthSales.reduce((s,i)=>s+(i.tax||0),0);
   const totalCost=monthSales.reduce((s,i)=>s+(i.items||[]).reduce((c,it)=>c+(it.cost||0)*(it.quantity||0),0),0);
   const cashSales=monthSales.filter(s=>s.paymentMethod==='cash').length;
   const cardSales=monthSales.filter(s=>s.paymentMethod==='card').length;
   const avgTransaction=monthSales.length>0?totalRevenue/monthSales.length:0;
-  const dailySales={};monthSales.forEach(s=>{dailySales[s.date]=(dailySales[s.date]||0)+s.total});const bestDay=Object.entries(dailySales).sort((a,b)=>b[1]-a[1])[0];
-  const cashierPerformance={};monthSales.forEach(s=>{const name=s.cashierName||'Unknown';cashierPerformance[name]=(cashierPerformance[name]||0)+s.total});const topCashier=Object.entries(cashierPerformance).sort((a,b)=>b[1]-a[1])[0];
-  el.innerHTML=`<h4>📈 Reports — ${new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'})}</h4>
-    <div class="card"><h5>💰 Revenue Summary</h5><div class="metrics"><div class="metric-card"><div class="metric-value">${formatCurrency(totalRevenue)}</div><div class="metric-label">Revenue</div></div><div class="metric-card"><div class="metric-value">${formatCurrency(totalTax)}</div><div class="metric-label">Tax</div></div></div><div class="metrics" style="margin-top:8px;"><div class="metric-card"><div class="metric-value">${formatCurrency(totalCost)}</div><div class="metric-label">COGS</div></div><div class="metric-card"><div class="metric-value" style="color:${totalRevenue-totalCost>=0?'#2ed573':'#ff4757'};">${formatCurrency(totalRevenue-totalCost)}</div><div class="metric-label">Gross Profit</div></div></div></div>
-    <div class="card"><h5>📊 Quick Stats</h5><div class="metrics"><div class="metric-card"><div class="metric-value">${monthSales.length}</div><div class="metric-label">Transactions</div></div><div class="metric-card"><div class="metric-value">${formatCurrency(avgTransaction)}</div><div class="metric-label">Avg Sale</div></div></div><div class="metrics" style="margin-top:8px;"><div class="metric-card"><div class="metric-value">${cashSales}</div><div class="metric-label">💵 Cash</div></div><div class="metric-card"><div class="metric-value">${cardSales}</div><div class="metric-label">💳 Card</div></div></div></div>
-    ${bestDay?`<div class="card"><h5>📅 Best Day</h5><p><strong>${bestDay[0]}</strong> — ${formatCurrency(bestDay[1])}</p></div>`:''}
-    ${topCashier?`<div class="card"><h5>⭐ Top Performer</h5><p><strong>${topCashier[0]}</strong> — ${formatCurrency(topCashier[1])}</p></div>`:''}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><button class="btn btn-primary" onclick="exportCSV('sales')">📥 Sales CSV</button><button class="btn btn-success" onclick="exportCSV('inventory')">📥 Inventory CSV</button><button class="btn btn-warning" onclick="downloadFullBackup()">💾 Full Backup</button><button class="btn btn-primary" onclick="window.print()">🖨️ Print</button></div>`;
+  const dailySales={};monthSales.forEach(s=>{dailySales[s.date]=(dailySales[s.date]||0)+s.total});
+  const bestDay=Object.entries(dailySales).sort((a,b)=>b[1]-a[1])[0];
+  const cashierPerf={};monthSales.forEach(s=>{const n=s.cashierName||'Unknown';cashierPerf[n]=(cashierPerf[n]||0)+s.total});
+  const topCashier=Object.entries(cashierPerf).sort((a,b)=>b[1]-a[1])[0];
+  el.innerHTML=`
+    <h4>Reports — ${new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'})}</h4>
+    <div class="card" style="border-left:3px solid var(--accent-gold);">
+      <h5>Revenue Summary</h5>
+      <div class="metrics">
+        <div class="metric-card"><div class="metric-value">${formatCurrency(totalRevenue)}</div><div class="metric-label">Revenue</div></div>
+        <div class="metric-card"><div class="metric-value" style="color:var(--accent-rose);">${formatCurrency(totalTax)}</div><div class="metric-label">Tax Collected</div></div>
+      </div>
+      <div class="metrics" style="margin-top:8px;">
+        <div class="metric-card"><div class="metric-value" style="color:var(--text-secondary);">${formatCurrency(totalCost)}</div><div class="metric-label">COGS</div></div>
+        <div class="metric-card"><div class="metric-value" style="color:${totalRevenue-totalCost>=0?'var(--accent-emerald)':'var(--accent-rose)'};">${formatCurrency(totalRevenue-totalCost)}</div><div class="metric-label">Gross Profit</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h5>Transaction Breakdown</h5>
+      <div class="metrics">
+        <div class="metric-card"><div class="metric-value" style="color:var(--text-primary);">${monthSales.length}</div><div class="metric-label">Total Transactions</div></div>
+        <div class="metric-card"><div class="metric-value" style="color:var(--text-primary);">${formatCurrency(avgTransaction)}</div><div class="metric-label">Average Sale</div></div>
+      </div>
+      <div class="metrics" style="margin-top:8px;">
+        <div class="metric-card"><div class="metric-value" style="color:var(--accent-emerald);">${cashSales}</div><div class="metric-label">💵 Cash</div></div>
+        <div class="metric-card"><div class="metric-value" style="color:var(--accent-blue);">${cardSales}</div><div class="metric-label">💳 Card</div></div>
+      </div>
+    </div>
+    ${bestDay?`<div class="card"><h5>Best Day</h5><div style="display:flex;justify-content:space-between;align-items:center;"><span style="color:var(--text-primary);">${bestDay[0]}</span><span style="font-family:var(--font-display);color:var(--accent-gold);font-weight:700;">${formatCurrency(bestDay[1])}</span></div></div>`:''}
+    ${topCashier?`<div class="card"><h5>Top Performer</h5><div style="display:flex;justify-content:space-between;align-items:center;"><span style="color:var(--text-primary);">⭐ ${topCashier[0]}</span><span style="font-family:var(--font-display);color:var(--accent-gold);font-weight:700;">${formatCurrency(topCashier[1])}</span></div></div>`:''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">
+      <button class="btn btn-primary" onclick="exportCSV('sales')">📥 Sales CSV</button>
+      <button class="btn btn-success" onclick="exportCSV('inventory')">📥 Inventory CSV</button>
+      <button class="btn btn-warning" onclick="downloadFullBackup()">💾 Full Backup</button>
+      <button class="btn btn-danger" onclick="window.print()">🖨 Print</button>
+    </div>`;
 }
-function exportCSV(type){
-  let csv='';const d=new Date().toISOString().split('T')[0];
-  if(type==='sales'){csv='ID,Date,Total,Tax,Payment,Cashier\n';getMyData('sales').forEach(s=>csv+=`${s.id},${s.date},${s.total},${s.tax||0},${s.paymentMethod},${s.cashierName||''}\n`)}
-  else{csv='SKU,Name,Price,Cost,Stock,Category,Barcode,Supplier\n';const suppliers=DB.getAll('suppliers');getMyData('products').forEach(p=>{const s=p.supplierId?suppliers.find(sp=>sp.id===p.supplierId):null;csv+=`${p.sku},${p.name},${p.price},${p.cost||0},${p.stock},${p.category||''},${p.barcode||''},${s?s.name:''}\n`})}
-  const b=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`${downloadPath}/${type}_report_${d}.csv`;a.click();
-}
-function downloadFullBackup(){const data={};DB.stores.forEach(s=>data[s]=DB.getAll(s));data.backupDate=new Date().toISOString();const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`${downloadPath}/full_backup_${new Date().toISOString().split('T')[0]}.json`;a.click();alert('✅ Full backup downloaded!')}
+function exportCSV(type){let csv='';const d=new Date().toISOString().split('T')[0];if(type==='sales'){csv='ID,Date,Total,Tax,Payment,Cashier\n';getMyData('sales').forEach(s=>csv+=`${s.id},${s.date},${s.total},${s.tax||0},${s.paymentMethod},${s.cashierName||''}\n`)}else{csv='SKU,Name,Price,Cost,Stock,Category,Barcode,Supplier\n';const suppliers=DB.getAll('suppliers');getMyData('products').forEach(p=>{const s=p.supplierId?suppliers.find(sp=>sp.id===p.supplierId):null;csv+=`${p.sku},${p.name},${p.price},${p.cost||0},${p.stock},${p.category||''},${p.barcode||''},${s?s.name:''}\n`})}const b=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`${type}_${d}.csv`;a.click()}
+function downloadFullBackup(){const data={};DB.stores.forEach(s=>data[s]=DB.getAll(s));data.backupDate=new Date().toISOString();const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`mlea_backup_${new Date().toISOString().split('T')[0]}.json`;a.click();alert('✓ Full backup downloaded!')}
 
 // ═══════════════════ DOWNLOAD MANAGER ═══════════════════
-function renderDownloadManager(el){el.innerHTML=`<div class="card" style="border-left:4px solid #7c6fff;"><h4>📁 Backup & Sync Manager</h4><p style="color:#a0a0b0;font-size:.8em;">Download backups for Google Drive or MEGA sync</p></div><div class="card"><h5>📂 Download Folder Path</h5><input type="text" id="downloadPathInput" value="${downloadPath}" placeholder="e.g., MLEA_Backups"><button class="btn btn-primary btn-sm" onclick="saveDownloadPath()">💾 Save Path</button></div><div class="card"><h5>📥 Downloads</h5><button class="btn btn-primary btn-block" onclick="downloadFullBackup()">📦 Full Backup (JSON)</button><button class="btn btn-success btn-block" onclick="exportCSV('sales')">📊 Sales CSV</button><button class="btn btn-warning btn-block" onclick="exportCSV('inventory')">📋 Inventory CSV</button></div><div class="card"><h5>☁️ Cloud Sync</h5><p style="font-size:.75em;color:#a0a0b0;"><strong>Google Drive:</strong> Download → Save to Drive folder<br><strong>MEGA:</strong> Download → Upload to MEGA folder<br><strong>Tip:</strong> Set browser download folder to Drive/MEGA for auto-sync.</p></div><div class="card" style="border:1px solid #ff4757;"><h5 style="color:#ff4757;">⚠️ Restore</h5><input type="file" id="restoreFile" accept=".json"><button class="btn btn-danger btn-block" onclick="restoreBackup()">🔄 Restore from File</button></div>`}
-function saveDownloadPath(){downloadPath=document.getElementById('downloadPathInput').value||'MLEA_Backups';const all=DB.getAll('settings');const e=all.find(s=>s.key==='downloadPath');if(e){e.value=downloadPath;DB.update('settings',e)}else{DB.add('settings',{key:'downloadPath',value:downloadPath})};alert('✅ Saved!')}
-function restoreBackup(){const file=document.getElementById('restoreFile').files[0];if(!file){alert('Select a file!');return}if(!confirm('Replace all data?'))return;const r=new FileReader();r.onload=function(e){try{const d=JSON.parse(e.target.result);DB.stores.forEach(s=>{if(d[s])DB.set(s,d[s])});alert('✅ Restored!');location.reload()}catch(err){alert('❌ Invalid file!')}};r.readAsText(file)}
+function renderDownloadManager(el){
+  el.innerHTML=`
+    <div class="card" style="border-left:3px solid var(--accent-gold);">
+      <h4>Backup & Sync Manager</h4>
+      <p style="color:var(--text-muted);font-size:.8em;">Download exports for cloud sync or local backup.</p>
+    </div>
+    <div class="card"><h5>📂 Download Folder Path</h5><input type="text" id="downloadPathInput" value="${downloadPath}" placeholder="e.g., MLEA_Backups"><button class="btn btn-primary btn-sm" onclick="saveDownloadPath()">Save Path</button></div>
+    <div class="card"><h5>📥 Export Data</h5><button class="btn btn-primary btn-block" onclick="downloadFullBackup()">📦 Full Backup (JSON)</button><button class="btn btn-success btn-block" onclick="exportCSV('sales')">📊 Sales Report CSV</button><button class="btn btn-warning btn-block" onclick="exportCSV('inventory')">📋 Inventory CSV</button></div>
+    <div class="card"><h5>☁️ Cloud Sync Guide</h5><p style="font-size:.78em;color:var(--text-muted);line-height:1.6;"><strong style="color:var(--text-secondary);">Google Drive:</strong> Download → save to synced Drive folder<br><strong style="color:var(--text-secondary);">MEGA:</strong> Download → upload to MEGA folder<br><strong style="color:var(--text-secondary);">Tip:</strong> Set browser download path to your cloud folder for automatic sync.</p></div>
+    <div class="card" style="border:1px solid rgba(240,101,119,0.25);">
+      <h5 style="color:var(--accent-rose);">⚠ Restore from Backup</h5>
+      <input type="file" id="restoreFile" accept=".json">
+      <button class="btn btn-danger btn-block" onclick="restoreBackup()">🔄 Restore Data</button>
+    </div>`
+}
+function saveDownloadPath(){downloadPath=document.getElementById('downloadPathInput').value||'MLEA_Backups';const all=DB.getAll('settings'),e=all.find(s=>s.key==='downloadPath');if(e){e.value=downloadPath;DB.update('settings',e)}else{DB.add('settings',{key:'downloadPath',value:downloadPath})};alert('✓ Saved!')}
+function restoreBackup(){const file=document.getElementById('restoreFile').files[0];if(!file){alert('Select a file');return}if(!confirm('This will replace all current data. Continue?'))return;const r=new FileReader();r.onload=function(e){try{const d=JSON.parse(e.target.result);DB.stores.forEach(s=>{if(d[s])DB.set(s,d[s])});alert('✓ Restored!');location.reload()}catch(err){alert('✗ Invalid backup file')}};r.readAsText(file)}
 
 // ═══════════════════ SETTINGS ═══════════════════
-function renderSettings(el){el.innerHTML=`<div class="card"><h4>💱 Currency</h4><select onchange="currentCurrency=this.value;saveSetting('currency',this.value);switchView('settings')">${Object.entries(currencies).map(([c,v])=>`<option value="${c}" ${currentCurrency===c?'selected':''}>${v.flag} ${v.name}</option>`).join('')}</select></div><div class="card"><h4>💰 Tax Rate (%)</h4><input type="number" id="taxInput" value="${taxRate*100}" step="0.1"><button class="btn btn-primary btn-sm" onclick="taxRate=(parseFloat(document.getElementById('taxInput').value)||0)/100;saveSetting('taxRate',taxRate.toString());alert('Saved!')">Save Tax</button></div>`}
-function saveSetting(k,v){const all=DB.getAll('settings');const e=all.find(s=>s.key===k);if(e){e.value=v;DB.update('settings',e)}else{DB.add('settings',{key:k,value:v})}}
+function renderSettings(el){
+  el.innerHTML=`
+    <h4>Settings</h4>
+    <div class="card"><h5>💱 Currency</h5><select onchange="currentCurrency=this.value;saveSetting('currency',this.value);switchView('settings')">${Object.entries(currencies).map(([c,v])=>`<option value="${c}" ${currentCurrency===c?'selected':''}>${v.flag} ${v.name} (${v.symbol})</option>`).join('')}</select></div>
+    <div class="card"><h5>💰 Tax Rate</h5><div style="display:flex;gap:10px;align-items:center;"><input type="number" id="taxInput" value="${taxRate*100}" step="0.1" style="margin-bottom:0;"><button class="btn btn-primary btn-sm" onclick="taxRate=(parseFloat(document.getElementById('taxInput').value)||0)/100;saveSetting('taxRate',taxRate.toString());alert('✓ Saved!')">Save</button></div></div>`
+}
+function saveSetting(k,v){const all=DB.getAll('settings'),e=all.find(s=>s.key===k);if(e){e.value=v;DB.update('settings',e)}else{DB.add('settings',{key:k,value:v})}}
 
 // ═══════════════════ MODAL SYSTEM ═══════════════════
 function showModal(type,id){
   const suppliers=DB.getAll('suppliers');
-  let html='';
+  let html='',sup=`<select id="modalSelect"><option value="">No Supplier</option>${suppliers.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select>`;
   switch(type){
-    case 'addBranch':html=`<h4>➕ Add Branch</h4><input type="text" id="modalInput1" placeholder="Branch Name *"><input type="text" id="modalInput2" placeholder="Address"><input type="tel" id="modalInput3" placeholder="Phone"><button class="btn btn-primary btn-block" onclick="addBranch()">💾 Create</button>`;break;
-    case 'addSupplier':html=`<h4>🚚 Add Supplier</h4><input type="text" id="modalInput1" placeholder="Supplier Name *"><input type="text" id="modalInput2" placeholder="Contact Person"><input type="tel" id="modalInput3" placeholder="Phone"><input type="email" id="modalInput4" placeholder="Email"><input type="text" id="modalInput5" placeholder="Address"><button class="btn btn-primary btn-block" onclick="addSupplier()">💾 Save</button>`;break;
-    case 'editSupplier':const sp=DB.getById('suppliers',id);html=`<h4>✎ Edit Supplier</h4><input type="text" id="modalInput1" value="${sp.name}" placeholder="Name *"><input type="text" id="modalInput2" value="${sp.contact||''}" placeholder="Contact"><input type="tel" id="modalInput3" value="${sp.phone||''}" placeholder="Phone"><input type="email" id="modalInput4" value="${sp.email||''}" placeholder="Email"><input type="text" id="modalInput5" value="${sp.address||''}" placeholder="Address"><button class="btn btn-primary btn-block" onclick="editSupplier(${id})">💾 Save</button>`;break;
-    case 'addProduct':html=`<h4>📦 Add Product</h4><input type="text" id="modalInput1" placeholder="Product Name *"><input type="number" id="modalInput2" placeholder="Selling Price *" step="0.01"><input type="number" id="modalInput3" placeholder="Cost Price" step="0.01"><input type="number" id="modalInput4" placeholder="Stock Quantity" value="0"><input type="text" id="modalInput5" placeholder="Category" value="General"><input type="text" id="modalInput6" placeholder="Barcode (for scanner)"><select id="modalSelect"><option value="">No Supplier</option>${suppliers.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select><button class="btn btn-primary btn-block" onclick="addProduct()">💾 Save</button>`;break;
-    case 'editProduct':const p=DB.getById('products',id);html=`<h4>✎ Edit Product</h4><input type="text" id="modalInput1" value="${p.name}" placeholder="Name *"><input type="number" id="modalInput2" value="${p.price}" placeholder="Price *" step="0.01"><input type="number" id="modalInput3" value="${p.cost||0}" placeholder="Cost" step="0.01"><input type="number" id="modalInput4" value="${p.stock}" placeholder="Stock"><input type="text" id="modalInput5" value="${p.category||''}" placeholder="Category"><input type="text" id="modalInput6" value="${p.barcode||''}" placeholder="Barcode"><select id="modalSelect"><option value="">No Supplier</option>${suppliers.map(s=>`<option value="${s.id}" ${p.supplierId===s.id?'selected':''}>${s.name}</option>`).join('')}</select><button class="btn btn-primary btn-block" onclick="editProduct(${id})">💾 Save</button>`;break;
-    case 'addPO':html=`<h4>📋 New Purchase Order</h4><select id="modalSelect"><option value="">Select Supplier</option>${suppliers.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select><input type="text" id="modalInput1" placeholder="Item Name"><input type="number" id="modalInput2" placeholder="Quantity" value="1"><input type="number" id="modalInput3" placeholder="Cost per Unit" step="0.01"><button class="btn btn-primary btn-block" onclick="addPO()">💾 Create Order</button>`;break;
+    case 'addBranch':html=`<h4>Add Branch</h4><input type="text" id="modalInput1" placeholder="Branch Name *"><input type="text" id="modalInput2" placeholder="Address"><input type="tel" id="modalInput3" placeholder="Phone"><button class="btn btn-primary btn-block" onclick="addBranch()">Create Branch</button>`;break;
+    case 'addSupplier':html=`<h4>Add Supplier</h4><input type="text" id="modalInput1" placeholder="Supplier Name *"><input type="text" id="modalInput2" placeholder="Contact Person"><input type="tel" id="modalInput3" placeholder="Phone"><input type="email" id="modalInput4" placeholder="Email"><input type="text" id="modalInput5" placeholder="Address"><button class="btn btn-primary btn-block" onclick="addSupplier()">Save Supplier</button>`;break;
+    case 'editSupplier':const sp=DB.getById('suppliers',id);html=`<h4>Edit Supplier</h4><input type="text" id="modalInput1" value="${sp.name}" placeholder="Name *"><input type="text" id="modalInput2" value="${sp.contact||''}" placeholder="Contact"><input type="tel" id="modalInput3" value="${sp.phone||''}" placeholder="Phone"><input type="email" id="modalInput4" value="${sp.email||''}" placeholder="Email"><input type="text" id="modalInput5" value="${sp.address||''}" placeholder="Address"><button class="btn btn-primary btn-block" onclick="editSupplier(${id})">Save Changes</button>`;break;
+    case 'addProduct':html=`<h4>Add Product</h4><input type="text" id="modalInput1" placeholder="Product Name *"><input type="number" id="modalInput2" placeholder="Selling Price *" step="0.01"><input type="number" id="modalInput3" placeholder="Cost Price" step="0.01"><input type="number" id="modalInput4" placeholder="Stock Quantity" value="0"><input type="text" id="modalInput5" placeholder="Category" value="General"><input type="text" id="modalInput6" placeholder="Barcode (for scanner)">${sup}<button class="btn btn-primary btn-block" onclick="addProduct()">Save Product</button>`;break;
+    case 'editProduct':const p=DB.getById('products',id);html=`<h4>Edit Product</h4><input type="text" id="modalInput1" value="${p.name}" placeholder="Name *"><input type="number" id="modalInput2" value="${p.price}" placeholder="Price *" step="0.01"><input type="number" id="modalInput3" value="${p.cost||0}" placeholder="Cost" step="0.01"><input type="number" id="modalInput4" value="${p.stock}" placeholder="Stock"><input type="text" id="modalInput5" value="${p.category||''}" placeholder="Category"><input type="text" id="modalInput6" value="${p.barcode||''}" placeholder="Barcode"><select id="modalSelect"><option value="">No Supplier</option>${suppliers.map(s=>`<option value="${s.id}" ${p.supplierId===s.id?'selected':''}>${s.name}</option>`).join('')}</select><button class="btn btn-primary btn-block" onclick="editProduct(${id})">Save Changes</button>`;break;
+    case 'addPO':html=`<h4>New Purchase Order</h4><select id="modalSelect"><option value="">Select Supplier *</option>${suppliers.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select><input type="text" id="modalInput1" placeholder="Item Name"><input type="number" id="modalInput2" placeholder="Quantity" value="1"><input type="number" id="modalInput3" placeholder="Cost per Unit" step="0.01"><button class="btn btn-primary btn-block" onclick="addPO()">Create Order</button>`;break;
   }
   document.getElementById('modalContent').innerHTML=html+'<button class="btn btn-danger btn-block" onclick="closeModal()" style="margin-top:8px;">Cancel</button>';
   document.getElementById('modal').classList.add('active');
 }
 function closeModal(){document.getElementById('modal').classList.remove('active')}
 document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal()});
-document.addEventListener('keydown',function(e){if(document.getElementById('loginScreen').style.display!=='none'){if(e.key>='0'&&e.key<='9')enterPin(e.key);else if(e.key==='Enter')submitPin();else if(e.key==='Backspace'){pinEntry=pinEntry.slice(0,-1);updatePinDisplay()}}});
-
-console.log('🚀 MLEA POS v3.0 - Products+Cost+Supplier+PO+Reports');
+document.addEventListener('keydown',function(e){
+  if(document.getElementById('loginScreen').style.display!=='none'){
+    if(e.key>='0'&&e.key<='9')enterPin(e.key);
+    else if(e.key==='Enter')submitPin();
+    else if(e.key==='Backspace'){pinEntry=pinEntry.slice(0,-1);updatePinDisplay();}
+  }
+  if(e.key==='Escape')closeModal();
+});
 showLicenseGate();
 </script>
 </body>
