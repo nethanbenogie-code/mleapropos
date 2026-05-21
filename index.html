@@ -318,7 +318,14 @@ function setActivated(key, licenseInfo){
   
   showLicenseGate();
 }
-function clearActivation(){localStorage.removeItem('mlea_pos_activated');localStorage.removeItem('mlea_pos_license');currentUser=null;cart=[];showLicenseGate()}
+function clearActivation(){
+  localStorage.removeItem('mlea_pos_activated');
+  localStorage.removeItem('mlea_pos_license');
+  localStorage.removeItem('mlea_license_info');  // ← Add this
+  currentUser = null;
+  cart = [];
+  showLicenseGate();
+}
 function getStoredLicense(){return localStorage.getItem('mlea_pos_license')||''}
 function showLicenseGate(){
   if(isActivated()){
