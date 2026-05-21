@@ -340,6 +340,7 @@ function showLicenseGate(){
     document.getElementById('licenseInput').value = getStoredLicense();
     document.getElementById('activateBtn').style.display = 'none';
     document.getElementById('deactivateBtn').style.display = 'block';
+    document.getElementById('validateBtn').style.display = 'block';
     
     // Show device info if available
     const storedInfo = localStorage.getItem('mlea_license_info');
@@ -366,6 +367,7 @@ function showLicenseGate(){
     document.getElementById('deactivateBtn').style.display = 'none';
     document.getElementById('licenseStatus').textContent = '';
     document.getElementById('licenseStatus').className = 'license-status';
+    document.getElementById('validateBtn').style.display = 'none';
   }
 }
 async function handleActivation(){
