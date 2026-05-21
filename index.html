@@ -421,6 +421,47 @@ async function handleActivation(){
   }
   btn.disabled = false;
 }
+
+async function handleValidate(){
+  const statusEl = document.getElementById('licenseStatus');
+  const licenseKey = getStoredLicense();
+  
+  if(!licenseKey){
+    statusEl.textContent = 'No license found';
+    statusEl.className = 'license-status error';
+    return;
+  }
+  
+  statusEl.textContent = 'Checking…';
+  statusEl.className = 'license-status';
+  
+  const url = LICENSE_SERVER + '?action=validate&licenseKey=' + 
+    encodeURIComponent(licenseKey) + '&deviceId=' + encodeURIComponent(getDeviceId());
+  
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    
+    if(d.success){
+      statusEl.textContent = '✓ Valid · Device ' + 
+        (d.deviceCount || '?') + ' of ' + (d.maxDevices || '?');
+      statusEl.className = 'license-status success';
+      
+      // Update stored info
+      localStorage.setItem('mlea_license_info', JSON.stringify({
+        deviceCount: d.deviceCount,
+        maxDevices: d.maxDevices,
+        customer: d.customer
+      }));
+    } else {
+      statusEl.textContent = '✗ ' + d.message;
+      statusEl.className = 'license-status error';
+    }
+  } catch(e) {
+    statusEl.textContent = 'Cannot reach server';
+    statusEl.className = 'license-status error';
+  }
+}    
 async function handleDeactivation(){if(!confirm('Deactivate this license?'))return;try{await fetch(LICENSE_SERVER+'?action=deactivate&licenseKey='+encodeURIComponent(getStoredLicense())+'&deviceId='+encodeURIComponent(getDeviceId()))}catch(e){}clearActivation()}
 
 // ═══════════════════ DATABASE ═══════════════════
