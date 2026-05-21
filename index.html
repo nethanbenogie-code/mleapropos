@@ -528,8 +528,110 @@ function receivePO(id){const po=DB.getById('purchaseOrders',id);if(!po)return;po
 
 // ═══════════════════ USERS ═══════════════════
 function renderUsers(el){
-  const usrs=currentView==='allUsers'?DB.getAll('users'):getMyData('users');
-  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><h4 style="margin:0;">Users</h4><button class="btn btn-primary btn-sm" onclick="addUser()">+ Add</button></div>${usrs.map(u=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;align-items:center;gap:10px;"><span style="font-size:1.4em;">${u.role==='admin'?'👑':u.role==='manager'?'🎯':'👤'}</span><div><strong style="font-family:var(--font-display);">${u.name}</strong><div style="margin-top:3px;display:flex;gap:6px;"><span class="role-badge ${u.role}-badge">${u.role}</span>${u.active?'<span style="font-size:.65em;color:var(--accent-emerald);">● Active</span>':'<span style="font-size:.65em;color:var(--accent-rose);">● Inactive</span>'}</div></div></div><div style="display:flex;gap:6px;"><button class="btn btn-warning btn-xs" onclick="toggleUser(${u.id})">${u.active?'Deact.':'Activate'}</button><button class="btn btn-danger btn-xs" onclick="if(confirm('Delete user?')){DB.delete('users',${u.id});switchView(currentView);renderLoginScreen()}">🗑</button></div></div></div>`).join('')}`
+  const usrs = currentView === 'allUsers' 
+    ? DB.getAll('users') 
+    : getMyData('users');
+  
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h4 style="margin:0;">Users</h4>
+      <button class="btn btn-primary btn-sm" onclick="addUser()">+ Add</button>
+    </div>
+    ${usrs.map(u => {
+      // Determine if current user can delete this user
+      let canDelete = false;
+      if (currentUser.role === 'admin') {
+        // Admin can delete anyone except themselves
+        canDelete = u.id !== currentUser.id;
+      } else if (currentUser.role === 'manager') {
+        // Manager can ONLY delete cashiers in their own branch
+        canDelete = u.role === 'cashier' && u.branchId === currentUser.branchId;
+      }
+      // Cashier: canDelete stays false — can't delete anyone
+      
+      return `
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:1.4em;">
+                ${u.role === 'admin' ? '👑' : u.role === 'manager' ? '🎯' : '👤'}
+              </span>
+              <div>
+                <strong style="font-family:var(--font-display);">${u.name}</strong>
+                <div style="margin-top:3px;display:flex;gap:6px;">
+                  <span class="role-badge ${u.role}-badge">${u.role}</span>
+                  ${u.active 
+                    ? '<span style="font-size:.65em;color:var(--accent-emerald);">● Active</span>' 
+                    : '<span style="font-size:.65em;color:var(--accent-rose);">● Inactive</span>'
+                  }
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              ${currentUser.role === 'admin' || (currentUser.role === 'manager' && u.role === 'cashier') ? 
+                `<button class="btn btn-warning btn-xs" onclick="toggleUser(${u.id})">
+                  ${u.active ? 'Deact.' : 'Activate'}
+                </button>` : ''
+              }
+              ${canDelete ? 
+                `<button class="btn btn-danger btn-xs" onclick="deleteUserSafe(${u.id},'${u.name}','${u.role}')">🗑</button>` 
+                : ''
+              }
+            </div>
+          </div>
+        </div>`;
+    }).join('')}
+  `;
+}
+
+// Safe delete function with permission check
+function deleteUserSafe(id, name, role) {
+  // Double-check permissions before deleting
+  if (currentUser.role === 'cashier') {
+    alert('❌ Cashiers cannot delete users.');
+    return;
+  }
+  
+  if (currentUser.role === 'manager') {
+    const targetUser = DB.getById('users', id);
+    if (!targetUser) return;
+    
+    // Manager can't delete admins
+    if (targetUser.role === 'admin') {
+      alert('❌ You cannot delete an Admin account.');
+      return;
+    }
+    
+    // Manager can't delete other managers
+    if (targetUser.role === 'manager') {
+      alert('❌ You cannot delete another Manager account.');
+      return;
+    }
+    
+    // Manager can't delete users from other branches
+    if (targetUser.branchId !== currentUser.branchId) {
+      alert('❌ You can only delete users from your own branch.');
+      return;
+    }
+    
+    // Manager can't delete themselves
+    if (targetUser.id === currentUser.id) {
+      alert('❌ You cannot delete your own account.');
+      return;
+    }
+  }
+  
+  if (currentUser.role === 'admin' && id === currentUser.id) {
+    alert('❌ You cannot delete your own admin account.');
+    return;
+  }
+  
+  if (!confirm(`⚠️ Delete user "${name}" (${role})?\n\nThis cannot be undone!`)) return;
+  
+  DB.delete('users', id);
+  switchView(currentView);
+  renderLoginScreen();
+  alert('✅ User deleted.');
 }
 function addUser(){
   const name = prompt('Cashier name:');
