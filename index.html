@@ -247,7 +247,12 @@ tr:hover td{background:var(--bg-glass);color:var(--text-primary)}
             <p>Enter your license key to unlock the system</p>
             <input type="text" id="licenseInput" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19" oninput="formatLicense(this)">
             <button class="btn-activate" id="activateBtn" onclick="handleActivation()">Activate License</button>
-            <button class="btn-deactivate" id="deactivateBtn" style="display:none;" onclick="handleDeactivation()">Deactivate License</button>
+            <button class="btn-deactivate" id="deactivateBtn" style="display:none;" 
+  onclick="handleDeactivation()">Deactivate License</button>
+
+<!-- ADD THIS NEW BUTTON -->
+<button class="btn-deactivate" id="validateBtn" style="display:none;margin-top:4px;color:var(--accent-blue);border-color:rgba(111,163,239,0.3);" 
+  onclick="handleValidate()">🔍 Check License Status</button>
             <div class="license-status" id="licenseStatus"></div>
         </div>
     </div>
