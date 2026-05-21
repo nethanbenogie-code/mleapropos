@@ -332,14 +332,56 @@ function showLicenseGate(){
   }
 }
 async function handleActivation(){
-  const input=document.getElementById('licenseInput'),statusEl=document.getElementById('licenseStatus'),btn=document.getElementById('activateBtn'),key=input.value.trim();
-  if(!key){statusEl.textContent='⚠ Enter license key';statusEl.className='license-status error';return}
-  btn.disabled=true;statusEl.textContent='Verifying…';statusEl.className='license-status';
-  const url=LICENSE_SERVER+'?action=activate&licenseKey='+encodeURIComponent(key)+'&deviceId='+encodeURIComponent(getDeviceId());
-  try{const r=await fetch(url),t=await r.text();let d;try{d=JSON.parse(t)}catch(e){statusEl.textContent='Server error';statusEl.className='license-status error';btn.disabled=false;return}
-    if(d.success){setActivated(key)}else{statusEl.textContent='✗ '+d.message;statusEl.className='license-status error'}
-  }catch(e){if(key===DEMO_KEY){setActivated(key)}else{statusEl.textContent='✗ Cannot reach server';statusEl.className='license-status error'}}
-  btn.disabled=false;
+  const input = document.getElementById('licenseInput'),
+        statusEl = document.getElementById('licenseStatus'),
+        btn = document.getElementById('activateBtn'),
+        key = input.value.trim();
+  
+  if(!key){
+    statusEl.textContent = '⚠ Enter license key';
+    statusEl.className = 'license-status error';
+    return;
+  }
+  
+  btn.disabled = true;
+  statusEl.textContent = 'Verifying…';
+  statusEl.className = 'license-status';
+  
+  const deviceId = getDeviceId();
+  const url = LICENSE_SERVER + '?action=activate&licenseKey=' + 
+    encodeURIComponent(key) + '&deviceId=' + encodeURIComponent(deviceId);
+  
+  try {
+    const r = await fetch(url);
+    const t = await r.text();
+    let d;
+    try { d = JSON.parse(t); } catch(e) {
+      statusEl.textContent = 'Server error. Try again.';
+      statusEl.className = 'license-status error';
+      btn.disabled = false;
+      return;
+    }
+    
+    if(d.success){
+      setActivated(key);
+      statusEl.textContent = '✓ Activated! ' + 
+        (d.deviceCount ? '(Device ' + d.deviceCount + ' of ' + d.maxDevices + ')' : '');
+      statusEl.className = 'license-status success';
+    } else {
+      statusEl.textContent = '✗ ' + d.message;
+      statusEl.className = 'license-status error';
+    }
+  } catch(e) {
+    if(key === DEMO_KEY){
+      setActivated(key);
+      statusEl.textContent = '✓ Demo activated (offline)';
+      statusEl.className = 'license-status success';
+    } else {
+      statusEl.textContent = '✗ Cannot reach server';
+      statusEl.className = 'license-status error';
+    }
+  }
+  btn.disabled = false;
 }
 async function handleDeactivation(){if(!confirm('Deactivate this license?'))return;try{await fetch(LICENSE_SERVER+'?action=deactivate&licenseKey='+encodeURIComponent(getStoredLicense())+'&deviceId='+encodeURIComponent(getDeviceId()))}catch(e){}clearActivation()}
 
