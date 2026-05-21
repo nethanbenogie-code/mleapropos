@@ -312,23 +312,38 @@ function clearActivation(){localStorage.removeItem('mlea_pos_activated');localSt
 function getStoredLicense(){return localStorage.getItem('mlea_pos_license')||''}
 function showLicenseGate(){
   if(isActivated()){
-    document.getElementById('licenseGate').style.display='none';
-    document.getElementById('loginScreen').style.display='flex';
-    document.getElementById('mainApp').style.display='none';
-    document.getElementById('licenseInput').value=getStoredLicense();
-    document.getElementById('activateBtn').style.display='none';
-    document.getElementById('deactivateBtn').style.display='block';
-    const s=document.getElementById('licenseStatus');s.textContent='✓ System Activated';s.className='license-status success';
+    document.getElementById('licenseGate').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('licenseInput').value = getStoredLicense();
+    document.getElementById('activateBtn').style.display = 'none';
+    document.getElementById('deactivateBtn').style.display = 'block';
+    
+    // Show device info if available
+    const storedInfo = localStorage.getItem('mlea_license_info');
+    let infoText = '✓ System Activated';
+    if(storedInfo){
+      try {
+        const info = JSON.parse(storedInfo);
+        if(info.deviceCount && info.maxDevices){
+          infoText = '✓ Activated · Device ' + info.deviceCount + ' of ' + info.maxDevices;
+        }
+      } catch(e) {}
+    }
+    
+    const s = document.getElementById('licenseStatus');
+    s.textContent = infoText;
+    s.className = 'license-status success';
     initApp();
   } else {
-    document.getElementById('licenseGate').style.display='flex';
-    document.getElementById('loginScreen').style.display='none';
-    document.getElementById('mainApp').style.display='none';
-    document.getElementById('licenseInput').value='';
-    document.getElementById('activateBtn').style.display='block';
-    document.getElementById('deactivateBtn').style.display='none';
-    document.getElementById('licenseStatus').textContent='';
-    document.getElementById('licenseStatus').className='license-status';
+    document.getElementById('licenseGate').style.display = 'flex';
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('licenseInput').value = '';
+    document.getElementById('activateBtn').style.display = 'block';
+    document.getElementById('deactivateBtn').style.display = 'none';
+    document.getElementById('licenseStatus').textContent = '';
+    document.getElementById('licenseStatus').className = 'license-status';
   }
 }
 async function handleActivation(){
