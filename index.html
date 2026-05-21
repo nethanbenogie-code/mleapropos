@@ -634,30 +634,61 @@ function deleteUserSafe(id, name, role) {
   alert('✅ User deleted.');
 }
 function addUser(){
-  const name = prompt('Cashier name:');
+  const name = prompt('User name:');
   if(!name) return;
   const pin = prompt('4-digit PIN:');
   if(!pin || pin.length !== 4){ alert('PIN must be 4 digits!'); return; }
   
-  // Manager can ONLY create cashiers. Admin can choose any role.
-  let role = 'cashier';
+  // Determine role based on who's creating
+  let role = 'cashier'; // Default for manager
+  
   if(currentUser.role === 'admin') {
-    const chosen = prompt('Role:\n\n1 = Cashier\n2 = Manager\n3 = Admin\n\nType number:');
+    const chosen = prompt('Select role:\n\n1 = Cashier\n2 = Manager\n3 = Admin\n\nEnter number:');
     if(chosen === '2') role = 'manager';
     else if(chosen === '3') role = 'admin';
     else role = 'cashier';
   }
-  // For managers: role stays as 'cashier' — no prompt needed
+  // If manager: role stays as 'cashier' automatically — no prompt
   
   DB.add('users', {
-    name, role, active: true, pin,
+    name, 
+    role, 
+    active: true, 
+    pin,
     branchId: currentUser.branchId
   });
+  
   switchView(currentView);
   renderLoginScreen();
   alert('✅ ' + name + ' created as ' + role.toUpperCase() + '\nPIN: ' + pin);
 }
-function toggleUser(id){const u=DB.getById('users',id);u.active=!u.active;DB.update('users',u);switchView(currentView);renderLoginScreen()}
+function toggleUser(id){
+  const u = DB.getById('users', id);
+  if(!u) return;
+  
+  // Can't toggle yourself
+  if(u.id === currentUser.id){
+    alert('❌ You cannot deactivate your own account.');
+    return;
+  }
+  
+  // Manager can't toggle admins or other managers
+  if(currentUser.role === 'manager' && u.role !== 'cashier'){
+    alert('❌ You can only manage cashier accounts.');
+    return;
+  }
+  
+  // Manager can't toggle users from other branches
+  if(currentUser.role === 'manager' && u.branchId !== currentUser.branchId){
+    alert('❌ You can only manage users from your own branch.');
+    return;
+  }
+  
+  u.active = !u.active;
+  DB.update('users', u);
+  switchView(currentView);
+  renderLoginScreen();
+}
 
 // ═══════════════════ SALES ═══════════════════
 function renderSales(el){
