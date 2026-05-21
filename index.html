@@ -425,7 +425,142 @@ const DB={
 };
 DB.init();
 
-const currencies={PHP:{symbol:'₱',name:'Philippine Peso',flag:'🇵🇭',decimals:2},USD:{symbol:'$',name:'US Dollar',flag:'🇺🇸',decimals:2},EUR:{symbol:'€',name:'Euro',flag:'🇪🇺',decimals:2},GBP:{symbol:'£',name:'British Pound',flag:'🇬🇧',decimals:2},JPY:{symbol:'¥',name:'Japanese Yen',flag:'🇯🇵',decimals:0},SGD:{symbol:'S$',name:'Singapore Dollar',flag:'🇸🇬',decimals:2},AED:{symbol:'د.إ',name:'UAE Dirham',flag:'🇦🇪',decimals:2}};
+const currencies={
+  // Asia Pacific
+  PHP:{symbol:'₱',name:'Philippine Peso',flag:'🇵🇭',decimals:2},
+  JPY:{symbol:'¥',name:'Japanese Yen',flag:'🇯🇵',decimals:0},
+  CNY:{symbol:'¥',name:'Chinese Yuan',flag:'🇨🇳',decimals:2},
+  KRW:{symbol:'₩',name:'South Korean Won',flag:'🇰🇷',decimals:0},
+  HKD:{symbol:'HK$',name:'Hong Kong Dollar',flag:'🇭🇰',decimals:2},
+  TWD:{symbol:'NT$',name:'Taiwan Dollar',flag:'🇹🇼',decimals:0},
+  SGD:{symbol:'S$',name:'Singapore Dollar',flag:'🇸🇬',decimals:2},
+  MYR:{symbol:'RM',name:'Malaysian Ringgit',flag:'🇲🇾',decimals:2},
+  THB:{symbol:'฿',name:'Thai Baht',flag:'🇹🇭',decimals:2},
+  IDR:{symbol:'Rp',name:'Indonesian Rupiah',flag:'🇮🇩',decimals:0},
+  VND:{symbol:'₫',name:'Vietnamese Dong',flag:'🇻🇳',decimals:0},
+  BDT:{symbol:'৳',name:'Bangladeshi Taka',flag:'🇧🇩',decimals:2},
+  PKR:{symbol:'₨',name:'Pakistani Rupee',flag:'🇵🇰',decimals:2},
+  LKR:{symbol:'Rs',name:'Sri Lankan Rupee',flag:'🇱🇰',decimals:2},
+  NPR:{symbol:'Rs',name:'Nepalese Rupee',flag:'🇳🇵',decimals:2},
+  MMK:{symbol:'K',name:'Myanmar Kyat',flag:'🇲🇲',decimals:0},
+  KHR:{symbol:'៛',name:'Cambodian Riel',flag:'🇰🇭',decimals:0},
+  LAK:{symbol:'₭',name:'Lao Kip',flag:'🇱🇦',decimals:0},
+  BND:{symbol:'B$',name:'Brunei Dollar',flag:'🇧🇳',decimals:2},
+  MOP:{symbol:'P',name:'Macanese Pataca',flag:'🇲🇴',decimals:2},
+  MNT:{symbol:'₮',name:'Mongolian Tugrik',flag:'🇲🇳',decimals:0},
+  // South Asia
+  INR:{symbol:'₹',name:'Indian Rupee',flag:'🇮🇳',decimals:2},
+  // Oceania
+  AUD:{symbol:'A$',name:'Australian Dollar',flag:'🇦🇺',decimals:2},
+  NZD:{symbol:'NZ$',name:'New Zealand Dollar',flag:'🇳🇿',decimals:2},
+  FJD:{symbol:'FJ$',name:'Fijian Dollar',flag:'🇫🇯',decimals:2},
+  PGK:{symbol:'K',name:'Papua New Guinean Kina',flag:'🇵🇬',decimals:2},
+  SBD:{symbol:'SI$',name:'Solomon Islands Dollar',flag:'🇸🇧',decimals:2},
+  TOP:{symbol:'T$',name:'Tongan Paanga',flag:'🇹🇴',decimals:2},
+  VUV:{symbol:'Vt',name:'Vanuatu Vatu',flag:'🇻🇺',decimals:0},
+  WST:{symbol:'T',name:'Samoan Tala',flag:'🇼🇸',decimals:2},
+  // Americas
+  USD:{symbol:'$',name:'US Dollar',flag:'🇺🇸',decimals:2},
+  CAD:{symbol:'C$',name:'Canadian Dollar',flag:'🇨🇦',decimals:2},
+  MXN:{symbol:'Mex$',name:'Mexican Peso',flag:'🇲🇽',decimals:2},
+  BRL:{symbol:'R$',name:'Brazilian Real',flag:'🇧🇷',decimals:2},
+  ARS:{symbol:'$',name:'Argentine Peso',flag:'🇦🇷',decimals:2},
+  CLP:{symbol:'CLP$',name:'Chilean Peso',flag:'🇨🇱',decimals:0},
+  COP:{symbol:'COL$',name:'Colombian Peso',flag:'🇨🇴',decimals:0},
+  PEN:{symbol:'S/.',name:'Peruvian Sol',flag:'🇵🇪',decimals:2},
+  VES:{symbol:'Bs.',name:'Venezuelan Bolivar',flag:'🇻🇪',decimals:2},
+  BOB:{symbol:'Bs.',name:'Bolivian Boliviano',flag:'🇧🇴',decimals:2},
+  PYG:{symbol:'₲',name:'Paraguayan Guarani',flag:'🇵🇾',decimals:0},
+  UYU:{symbol:'$U',name:'Uruguayan Peso',flag:'🇺🇾',decimals:2},
+  GTQ:{symbol:'Q',name:'Guatemalan Quetzal',flag:'🇬🇹',decimals:2},
+  HNL:{symbol:'L',name:'Honduran Lempira',flag:'🇭🇳',decimals:2},
+  NIO:{symbol:'C$',name:'Nicaraguan Cordoba',flag:'🇳🇮',decimals:2},
+  CRC:{symbol:'₡',name:'Costa Rican Colon',flag:'🇨🇷',decimals:0},
+  PAB:{symbol:'B/.',name:'Panamanian Balboa',flag:'🇵🇦',decimals:2},
+  DOP:{symbol:'RD$',name:'Dominican Peso',flag:'🇩🇴',decimals:2},
+  CUP:{symbol:'$MN',name:'Cuban Peso',flag:'🇨🇺',decimals:2},
+  JMD:{symbol:'J$',name:'Jamaican Dollar',flag:'🇯🇲',decimals:2},
+  TTD:{symbol:'TT$',name:'Trinidad & Tobago Dollar',flag:'🇹🇹',decimals:2},
+  BBD:{symbol:'Bds$',name:'Barbadian Dollar',flag:'🇧🇧',decimals:2},
+  GYD:{symbol:'G$',name:'Guyanese Dollar',flag:'🇬🇾',decimals:0},
+  BSD:{symbol:'B$',name:'Bahamian Dollar',flag:'🇧🇸',decimals:2},
+  BZD:{symbol:'BZ$',name:'Belize Dollar',flag:'🇧🇿',decimals:2},
+  // Europe
+  EUR:{symbol:'€',name:'Euro',flag:'🇪🇺',decimals:2},
+  GBP:{symbol:'£',name:'British Pound',flag:'🇬🇧',decimals:2},
+  CHF:{symbol:'Fr',name:'Swiss Franc',flag:'🇨🇭',decimals:2},
+  NOK:{symbol:'kr',name:'Norwegian Krone',flag:'🇳🇴',decimals:2},
+  SEK:{symbol:'kr',name:'Swedish Krona',flag:'🇸🇪',decimals:2},
+  DKK:{symbol:'kr',name:'Danish Krone',flag:'🇩🇰',decimals:2},
+  PLN:{symbol:'zł',name:'Polish Zloty',flag:'🇵🇱',decimals:2},
+  CZK:{symbol:'Kč',name:'Czech Koruna',flag:'🇨🇿',decimals:2},
+  HUF:{symbol:'Ft',name:'Hungarian Forint',flag:'🇭🇺',decimals:0},
+  RON:{symbol:'lei',name:'Romanian Leu',flag:'🇷🇴',decimals:2},
+  HRK:{symbol:'kn',name:'Croatian Kuna',flag:'🇭🇷',decimals:2},
+  BGN:{symbol:'лв',name:'Bulgarian Lev',flag:'🇧🇬',decimals:2},
+  RSD:{symbol:'din',name:'Serbian Dinar',flag:'🇷🇸',decimals:0},
+  UAH:{symbol:'₴',name:'Ukrainian Hryvnia',flag:'🇺🇦',decimals:2},
+  RUB:{symbol:'₽',name:'Russian Ruble',flag:'🇷🇺',decimals:2},
+  TRY:{symbol:'₺',name:'Turkish Lira',flag:'🇹🇷',decimals:2},
+  ISK:{symbol:'kr',name:'Icelandic Krona',flag:'🇮🇸',decimals:0},
+  MKD:{symbol:'ден',name:'Macedonian Denar',flag:'🇲🇰',decimals:0},
+  BAM:{symbol:'KM',name:'Bosnia Mark',flag:'🇧🇦',decimals:2},
+  ALL:{symbol:'L',name:'Albanian Lek',flag:'🇦🇱',decimals:0},
+  MDL:{symbol:'L',name:'Moldovan Leu',flag:'🇲🇩',decimals:2},
+  GEL:{symbol:'₾',name:'Georgian Lari',flag:'🇬🇪',decimals:2},
+  AMD:{symbol:'֏',name:'Armenian Dram',flag:'🇦🇲',decimals:0},
+  AZN:{symbol:'₼',name:'Azerbaijani Manat',flag:'🇦🇿',decimals:2},
+  BYN:{symbol:'Br',name:'Belarusian Ruble',flag:'🇧🇾',decimals:2},
+  // Middle East
+  AED:{symbol:'د.إ',name:'UAE Dirham',flag:'🇦🇪',decimals:2},
+  SAR:{symbol:'﷼',name:'Saudi Riyal',flag:'🇸🇦',decimals:2},
+  QAR:{symbol:'﷼',name:'Qatari Riyal',flag:'🇶🇦',decimals:2},
+  KWD:{symbol:'د.ك',name:'Kuwaiti Dinar',flag:'🇰🇼',decimals:3},
+  BHD:{symbol:'.د.ب',name:'Bahraini Dinar',flag:'🇧🇭',decimals:3},
+  OMR:{symbol:'﷼',name:'Omani Rial',flag:'🇴🇲',decimals:3},
+  JOD:{symbol:'JD',name:'Jordanian Dinar',flag:'🇯🇴',decimals:3},
+  ILS:{symbol:'₪',name:'Israeli Shekel',flag:'🇮🇱',decimals:2},
+  IQD:{symbol:'ع.د',name:'Iraqi Dinar',flag:'🇮🇶',decimals:0},
+  IRR:{symbol:'﷼',name:'Iranian Rial',flag:'🇮🇷',decimals:0},
+  LBP:{symbol:'ل.ل',name:'Lebanese Pound',flag:'🇱🇧',decimals:0},
+  SYP:{symbol:'£',name:'Syrian Pound',flag:'🇸🇾',decimals:0},
+  YER:{symbol:'﷼',name:'Yemeni Rial',flag:'🇾🇪',decimals:0},
+  // Africa
+  ZAR:{symbol:'R',name:'South African Rand',flag:'🇿🇦',decimals:2},
+  NGN:{symbol:'₦',name:'Nigerian Naira',flag:'🇳🇬',decimals:2},
+  KES:{symbol:'KSh',name:'Kenyan Shilling',flag:'🇰🇪',decimals:2},
+  GHS:{symbol:'₵',name:'Ghanaian Cedi',flag:'🇬🇭',decimals:2},
+  EGP:{symbol:'£',name:'Egyptian Pound',flag:'🇪🇬',decimals:2},
+  MAD:{symbol:'د.م.',name:'Moroccan Dirham',flag:'🇲🇦',decimals:2},
+  TZS:{symbol:'TSh',name:'Tanzanian Shilling',flag:'🇹🇿',decimals:0},
+  UGX:{symbol:'USh',name:'Ugandan Shilling',flag:'🇺🇬',decimals:0},
+  ETB:{symbol:'Br',name:'Ethiopian Birr',flag:'🇪🇹',decimals:2},
+  XOF:{symbol:'CFA',name:'West African CFA',flag:'🌍',decimals:0},
+  XAF:{symbol:'FCFA',name:'Central African CFA',flag:'🌍',decimals:0},
+  ZMW:{symbol:'ZK',name:'Zambian Kwacha',flag:'🇿🇲',decimals:2},
+  ZWL:{symbol:'Z$',name:'Zimbabwean Dollar',flag:'🇿🇼',decimals:2},
+  MZN:{symbol:'MT',name:'Mozambican Metical',flag:'🇲🇿',decimals:2},
+  AOA:{symbol:'Kz',name:'Angolan Kwanza',flag:'🇦🇴',decimals:2},
+  BWP:{symbol:'P',name:'Botswana Pula',flag:'🇧🇼',decimals:2},
+  MUR:{symbol:'Rs',name:'Mauritian Rupee',flag:'🇲🇺',decimals:2},
+  SCR:{symbol:'Rs',name:'Seychellois Rupee',flag:'🇸🇨',decimals:2},
+  DZD:{symbol:'دج',name:'Algerian Dinar',flag:'🇩🇿',decimals:2},
+  TND:{symbol:'DT',name:'Tunisian Dinar',flag:'🇹🇳',decimals:3},
+  LYD:{symbol:'LD',name:'Libyan Dinar',flag:'🇱🇾',decimals:3},
+  SDG:{symbol:'ج.س.',name:'Sudanese Pound',flag:'🇸🇩',decimals:2},
+  RWF:{symbol:'FRw',name:'Rwandan Franc',flag:'🇷🇼',decimals:0},
+  MWK:{symbol:'MK',name:'Malawian Kwacha',flag:'🇲🇼',decimals:2},
+  NAD:{symbol:'N$',name:'Namibian Dollar',flag:'🇳🇦',decimals:2},
+  SZL:{symbol:'L',name:'Swazi Lilangeni',flag:'🇸🇿',decimals:2},
+  LSL:{symbol:'L',name:'Lesotho Loti',flag:'🇱🇸',decimals:2},
+  // Central Asia
+  KZT:{symbol:'₸',name:'Kazakhstani Tenge',flag:'🇰🇿',decimals:2},
+  UZS:{symbol:'so\'m',name:'Uzbekistani Som',flag:'🇺🇿',decimals:0},
+  KGS:{symbol:'с',name:'Kyrgyzstani Som',flag:'🇰🇬',decimals:2},
+  TJS:{symbol:'SM',name:'Tajikistani Somoni',flag:'🇹🇯',decimals:2},
+  TMT:{symbol:'T',name:'Turkmenistani Manat',flag:'🇹🇲',decimals:2},
+  AFN:{symbol:'؋',name:'Afghan Afghani',flag:'🇦🇫',decimals:2},
+};
 
 let currentUser=null,currentView='dashboard',currentCurrency='PHP',taxRate=0.12,lowStockThreshold=10,defaultPrintMode='ask',cart=[],selectedUserId=null,pinEntry='',users=[],branches=[],products=[],downloadPath='MLEA_Backups';
 let lastSaleData=null; // stores last completed sale for receipt printing
@@ -1182,9 +1317,11 @@ function renderSettings(el){
   el.innerHTML=`
     <h4>Settings</h4>
     <div class="card"><h5>💱 Currency</h5>
-      <select onchange="currentCurrency=this.value;saveSetting('currency',this.value);switchView('settings')">
+      <input type="text" id="currencySearch" placeholder="🔍 Search currency…" oninput="filterCurrencies(this.value)" style="margin-bottom:8px;">
+      <select id="currencySelect" size="6" onchange="currentCurrency=this.value;saveSetting('currency',this.value);switchView('settings')" style="height:160px;border-radius:var(--radius-md);padding:4px;">
         ${Object.entries(currencies).map(([c,v])=>`<option value="${c}" ${currentCurrency===c?'selected':''}>${v.flag} ${v.name} (${v.symbol})</option>`).join('')}
       </select>
+      <p style="font-size:.72em;color:var(--accent-gold);margin-top:6px;font-weight:600;">Selected: ${currencies[currentCurrency].flag} ${currencies[currentCurrency].name} (${currencies[currentCurrency].symbol})</p>
     </div>
     <div class="card"><h5>💰 Tax Rate</h5>
       <div style="display:flex;gap:10px;align-items:center;">
@@ -1223,6 +1360,14 @@ function setPrintMode(mode){
   defaultPrintMode=mode;
   saveSetting('defaultPrintMode',mode);
   switchView('settings'); // re-render to show active state
+}
+function filterCurrencies(query){
+  const sel=document.getElementById('currencySelect');if(!sel)return;
+  const q=query.toLowerCase();
+  sel.innerHTML=Object.entries(currencies)
+    .filter(([c,v])=>v.name.toLowerCase().includes(q)||c.toLowerCase().includes(q)||v.symbol.toLowerCase().includes(q))
+    .map(([c,v])=>`<option value="${c}" ${currentCurrency===c?'selected':''}>${v.flag} ${v.name} (${v.symbol})</option>`)
+    .join('');
 }
 // ═══════════════════ LOW STOCK ALERTS ═══════════════════
 function getLowStockItems(){
