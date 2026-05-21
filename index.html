@@ -388,10 +388,11 @@ async function handleActivation(){
     }
     
     if(d.success){
-      setActivated(key);
-      statusEl.textContent = '✓ Activated! ' + 
-        (d.deviceCount ? '(Device ' + d.deviceCount + ' of ' + d.maxDevices + ')' : '');
-      statusEl.className = 'license-status success';
+  setActivated(key, {
+    deviceCount: d.deviceCount,
+    maxDevices: d.maxDevices,
+    customer: d.customer
+  });
     } else {
       statusEl.textContent = '✗ ' + d.message;
       statusEl.className = 'license-status error';
