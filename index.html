@@ -307,7 +307,17 @@ const DEMO_KEY='MLEA-DEMO-UNLOCK-KEY1';
 function getDeviceId(){return btoa(navigator.userAgent.slice(-15)+screen.width+'x'+screen.height+new Date().getTimezoneOffset()).replace(/[^a-zA-Z0-9]/g,'').slice(0,16)}
 function formatLicense(input){let v=input.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase();if(v.length>16)v=v.slice(0,16);let p=[];for(let i=0;i<v.length;i+=4)p.push(v.slice(i,i+4));input.value=p.join('-')}
 function isActivated(){return localStorage.getItem('mlea_pos_activated')==='true'}
-function setActivated(key){localStorage.setItem('mlea_pos_activated','true');localStorage.setItem('mlea_pos_license',key);showLicenseGate()}
+function setActivated(key, licenseInfo){
+  localStorage.setItem('mlea_pos_activated', 'true');
+  localStorage.setItem('mlea_pos_license', key);
+  
+  // Store license info (device count, max devices)
+  if(licenseInfo){
+    localStorage.setItem('mlea_license_info', JSON.stringify(licenseInfo));
+  }
+  
+  showLicenseGate();
+}
 function clearActivation(){localStorage.removeItem('mlea_pos_activated');localStorage.removeItem('mlea_pos_license');currentUser=null;cart=[];showLicenseGate()}
 function getStoredLicense(){return localStorage.getItem('mlea_pos_license')||''}
 function showLicenseGate(){
