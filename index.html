@@ -531,7 +531,30 @@ function renderUsers(el){
   const usrs=currentView==='allUsers'?DB.getAll('users'):getMyData('users');
   el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><h4 style="margin:0;">Users</h4><button class="btn btn-primary btn-sm" onclick="addUser()">+ Add</button></div>${usrs.map(u=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;align-items:center;gap:10px;"><span style="font-size:1.4em;">${u.role==='admin'?'👑':u.role==='manager'?'🎯':'👤'}</span><div><strong style="font-family:var(--font-display);">${u.name}</strong><div style="margin-top:3px;display:flex;gap:6px;"><span class="role-badge ${u.role}-badge">${u.role}</span>${u.active?'<span style="font-size:.65em;color:var(--accent-emerald);">● Active</span>':'<span style="font-size:.65em;color:var(--accent-rose);">● Inactive</span>'}</div></div></div><div style="display:flex;gap:6px;"><button class="btn btn-warning btn-xs" onclick="toggleUser(${u.id})">${u.active?'Deact.':'Activate'}</button><button class="btn btn-danger btn-xs" onclick="if(confirm('Delete user?')){DB.delete('users',${u.id});switchView(currentView);renderLoginScreen()}">🗑</button></div></div></div>`).join('')}`
 }
-function addUser(){const name=prompt('User name:');if(name){const pin=prompt('4-digit PIN:');if(pin&&pin.length===4){const role=prompt('Role (admin/manager/cashier):')||'cashier';DB.add('users',{name,role,active:true,pin,branchId:currentUser.branchId});switchView(currentView);renderLoginScreen()}}}
+function addUser(){
+  const name = prompt('Cashier name:');
+  if(!name) return;
+  const pin = prompt('4-digit PIN:');
+  if(!pin || pin.length !== 4){ alert('PIN must be 4 digits!'); return; }
+  
+  // Manager can ONLY create cashiers. Admin can choose any role.
+  let role = 'cashier';
+  if(currentUser.role === 'admin') {
+    const chosen = prompt('Role:\n\n1 = Cashier\n2 = Manager\n3 = Admin\n\nType number:');
+    if(chosen === '2') role = 'manager';
+    else if(chosen === '3') role = 'admin';
+    else role = 'cashier';
+  }
+  // For managers: role stays as 'cashier' — no prompt needed
+  
+  DB.add('users', {
+    name, role, active: true, pin,
+    branchId: currentUser.branchId
+  });
+  switchView(currentView);
+  renderLoginScreen();
+  alert('✅ ' + name + ' created as ' + role.toUpperCase() + '\nPIN: ' + pin);
+}
 function toggleUser(id){const u=DB.getById('users',id);u.active=!u.active;DB.update('users',u);switchView(currentView);renderLoginScreen()}
 
 // ═══════════════════ SALES ═══════════════════
