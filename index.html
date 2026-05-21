@@ -427,7 +427,7 @@ DB.init();
 
 const currencies={PHP:{symbol:'₱',name:'Philippine Peso',flag:'🇵🇭',decimals:2},USD:{symbol:'$',name:'US Dollar',flag:'🇺🇸',decimals:2},EUR:{symbol:'€',name:'Euro',flag:'🇪🇺',decimals:2},GBP:{symbol:'£',name:'British Pound',flag:'🇬🇧',decimals:2},JPY:{symbol:'¥',name:'Japanese Yen',flag:'🇯🇵',decimals:0},SGD:{symbol:'S$',name:'Singapore Dollar',flag:'🇸🇬',decimals:2},AED:{symbol:'د.إ',name:'UAE Dirham',flag:'🇦🇪',decimals:2}};
 
-let currentUser=null,currentView='dashboard',currentCurrency='PHP',taxRate=0.12,lowStockThreshold=10,cart=[],selectedUserId=null,pinEntry='',users=[],branches=[],products=[],downloadPath='MLEA_Backups';
+let currentUser=null,currentView='dashboard',currentCurrency='PHP',taxRate=0.12,lowStockThreshold=10,defaultPrintMode='ask',cart=[],selectedUserId=null,pinEntry='',users=[],branches=[],products=[],downloadPath='MLEA_Backups';
 let lastSaleData=null; // stores last completed sale for receipt printing
 
 function fc(a){const c=currencies[currentCurrency];return c.symbol+(c.decimals===0?Math.round(a).toLocaleString():a.toFixed(2))}
@@ -457,6 +457,7 @@ function initApp(){
     if(s.key==='taxRate')taxRate=parseFloat(s.value)||0.12;
     if(s.key==='downloadPath')downloadPath=s.value;
     if(s.key==='lowStockThreshold')lowStockThreshold=parseInt(s.value)||10;
+    if(s.key==='defaultPrintMode')defaultPrintMode=s.value||'ask';
   });
   renderLoginScreen();
 }
@@ -644,6 +645,26 @@ function processPayment(method){
 
 // ═══════════════════ SALE COMPLETE + PRINT MODAL ═══════════════════
 function showSaleCompleteModal(saleId,total,method){
+  // If a default print mode is set — skip the modal entirely
+  if(defaultPrintMode==='thermal'){
+    showSaleCompleteToast(saleId,total,method);
+    setTimeout(()=>printReceipt('thermal'),300);
+    setTimeout(()=>switchView('dashboard'),800);
+    return;
+  }
+  if(defaultPrintMode==='a4'){
+    showSaleCompleteToast(saleId,total,method);
+    setTimeout(()=>printReceipt('a4'),300);
+    setTimeout(()=>switchView('dashboard'),800);
+    return;
+  }
+  if(defaultPrintMode==='none'){
+    showSaleCompleteToast(saleId,total,method);
+    setTimeout(()=>switchView('dashboard'),2200);
+    return;
+  }
+
+  // defaultPrintMode === 'ask' — show the 3-option modal
   document.getElementById('modalContent').innerHTML=`
     <div class="sale-complete">
       <div class="check-circle">✓</div>
@@ -654,10 +675,10 @@ function showSaleCompleteModal(saleId,total,method){
     <div style="margin-top:20px;">
       <p style="text-align:center;font-size:.78em;color:var(--text-muted);margin-bottom:14px;font-family:var(--font-display);letter-spacing:.04em;text-transform:uppercase;">Print Receipt</p>
       <div class="print-option-grid">
-        <button class="print-option-btn" onclick="printReceipt('thermal');closeModal();">
+        <button class="print-option-btn" onclick="printReceipt('thermal');closeModal();switchView('dashboard');">
           <span class="pob-icon">🧾</span>Thermal<br><span style="font-size:.72em;color:var(--text-muted);font-family:var(--font-mono);">58/80mm</span>
         </button>
-        <button class="print-option-btn" onclick="printReceipt('a4');closeModal();">
+        <button class="print-option-btn" onclick="printReceipt('a4');closeModal();switchView('dashboard');">
           <span class="pob-icon">📄</span>A4<br><span style="font-size:.72em;color:var(--text-muted);font-family:var(--font-mono);">Full page</span>
         </button>
         <button class="print-option-btn" onclick="closeModal();switchView('dashboard');" style="border-color:rgba(240,101,119,0.25);color:var(--accent-rose);">
@@ -666,6 +687,21 @@ function showSaleCompleteModal(saleId,total,method){
       </div>
     </div>`;
   document.getElementById('modal').classList.add('active');
+}
+
+// Simple success toast used when print mode skips the modal
+function showSaleCompleteToast(saleId,total,method){
+  const existing=document.getElementById('saleToast');if(existing)existing.remove();
+  const toast=document.createElement('div');
+  toast.id='saleToast';
+  toast.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-elevated);border:2px solid var(--accent-emerald);border-radius:var(--radius-xl);padding:28px 32px;z-index:9999;text-align:center;box-shadow:0 12px 50px rgba(0,0,0,0.6);animation:popIn .35s cubic-bezier(0.22,1,0.36,1);min-width:220px;';
+  toast.innerHTML=`
+    <div style="width:56px;height:56px;background:var(--accent-emerald-soft);border:2px solid var(--accent-emerald);border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:24px;">✓</div>
+    <div style="font-family:var(--font-display);color:var(--accent-emerald);font-size:1em;font-weight:700;margin-bottom:4px;">Sale Complete</div>
+    <div style="font-family:var(--font-display);font-size:1.6em;font-weight:800;color:var(--text-primary);letter-spacing:-0.03em;">${formatCurrency(total)}</div>
+    <div style="font-size:.72em;color:var(--text-muted);margin-top:6px;">Receipt #${saleId} · ${method.toUpperCase()}</div>`;
+  document.body.appendChild(toast);
+  setTimeout(()=>{if(toast.parentElement){toast.style.opacity='0';toast.style.transition='opacity .4s';setTimeout(()=>toast.remove(),400)}},2000);
 }
 
 // ═══════════════════ RECEIPT PRINTING ═══════════════════
@@ -1162,10 +1198,32 @@ function renderSettings(el){
         <button class="btn btn-primary btn-sm" onclick="lowStockThreshold=parseInt(document.getElementById('lowStockInput').value)||10;saveSetting('lowStockThreshold',lowStockThreshold.toString());alert('✓ Saved!')">Save</button>
       </div>
       <p style="font-size:.72em;color:var(--text-muted);margin-top:6px;">Items at or below this quantity trigger low stock alerts.</p>
+    </div>
+    <div class="card"><h5>🖨 Default Print Mode</h5>
+      <p style="font-size:.76em;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">Choose what happens automatically after every sale. Set to <strong style="color:var(--text-secondary);">Ask</strong> to show the 3-option modal each time.</p>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;">
+        <button onclick="setPrintMode('ask')" style="padding:12px 8px;border-radius:var(--radius-md);border:2px solid ${defaultPrintMode==='ask'?'var(--accent-gold)':'var(--border)'};background:${defaultPrintMode==='ask'?'var(--accent-gold-soft)':'var(--bg-glass)'};color:${defaultPrintMode==='ask'?'var(--accent-gold)':'var(--text-secondary)'};cursor:pointer;font-family:var(--font-display);font-size:.8em;font-weight:700;transition:all .2s;">
+          ❓ Ask Every Time
+        </button>
+        <button onclick="setPrintMode('thermal')" style="padding:12px 8px;border-radius:var(--radius-md);border:2px solid ${defaultPrintMode==='thermal'?'var(--accent-emerald)':'var(--border)'};background:${defaultPrintMode==='thermal'?'var(--accent-emerald-soft)':'var(--bg-glass)'};color:${defaultPrintMode==='thermal'?'var(--accent-emerald)':'var(--text-secondary)'};cursor:pointer;font-family:var(--font-display);font-size:.8em;font-weight:700;transition:all .2s;">
+          🧾 Auto Thermal
+        </button>
+        <button onclick="setPrintMode('a4')" style="padding:12px 8px;border-radius:var(--radius-md);border:2px solid ${defaultPrintMode==='a4'?'var(--accent-blue)':'var(--border)'};background:${defaultPrintMode==='a4'?'var(--accent-blue-soft)':'var(--bg-glass)'};color:${defaultPrintMode==='a4'?'var(--accent-blue)':'var(--text-secondary)'};cursor:pointer;font-family:var(--font-display);font-size:.8em;font-weight:700;transition:all .2s;">
+          📄 Auto A4
+        </button>
+        <button onclick="setPrintMode('none')" style="padding:12px 8px;border-radius:var(--radius-md);border:2px solid ${defaultPrintMode==='none'?'var(--accent-rose)':'var(--border)'};background:${defaultPrintMode==='none'?'var(--accent-rose-soft)':'var(--bg-glass)'};color:${defaultPrintMode==='none'?'var(--accent-rose)':'var(--text-secondary)'};cursor:pointer;font-family:var(--font-display);font-size:.8em;font-weight:700;transition:all .2s;">
+          ✕ No Print
+        </button>
+      </div>
+      <p style="font-size:.7em;color:var(--accent-gold);font-weight:600;">Currently: ${defaultPrintMode==='ask'?'❓ Ask Every Time':defaultPrintMode==='thermal'?'🧾 Auto Thermal':defaultPrintMode==='a4'?'📄 Auto A4':'✕ No Print (Skip)'}</p>
     </div>`;
 }
 function saveSetting(k,v){const all=DB.getAll('settings'),e=all.find(s=>s.key===k);if(e){e.value=v;DB.update('settings',e)}else{DB.add('settings',{key:k,value:v})}}
-
+function setPrintMode(mode){
+  defaultPrintMode=mode;
+  saveSetting('defaultPrintMode',mode);
+  switchView('settings'); // re-render to show active state
+}
 // ═══════════════════ LOW STOCK ALERTS ═══════════════════
 function getLowStockItems(){
   return getMyData('products').filter(p=>p.active&&p.stock<=lowStockThreshold);
