@@ -263,12 +263,96 @@ function renderDashboard(el){
 }
 
 function renderPOS(el){
-  const myProducts=getMyData('products').filter(p=>p.active);
-  const subtotal=cart.reduce((s,i)=>s+(i.price*i.quantity),0),total=subtotal+(subtotal*taxRate);
-  el.innerHTML=`<div class="product-grid">${myProducts.slice(0,8).map(p=>`<div class="product-card" onclick="addToCart('${p.sku}')"><strong>${p.name}</strong><div style="color:#9b8fff;">${formatCurrency(p.price)}</div><small>Stock: ${p.stock}</small></div>`).join('')}</div>
-  <div class="card"><h4>🛒 Cart (${cart.length})</h4>${cart.map((item,i)=>`<div class="cart-item"><span>${item.name} x${item.quantity}</span><span>${formatCurrency(item.price*item.quantity)}</span><button class="btn btn-danger btn-xs" onclick="removeFromCart(${i})">✕</button></div>`).join('')||'<p style="color:#a0a0b0;">Empty</p>'}
-  <hr style="border-color:#2a3a5e;"><div style="font-size:1.3em;text-align:right;"><strong>Total: <span style="color:#9b8fff;">${formatCurrency(total)}</span></strong></div>
-  ${cart.length>0?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;"><button class="btn btn-success" onclick="processPayment('cash')">💵 Cash</button><button class="btn btn-primary" onclick="processPayment('card')">💳 Card</button></div>`:''}</div>`;
+  const myProducts = getMyData('products').filter(p => p.active);
+  const subtotal = cart.reduce((s,i) => s + (i.price * i.quantity), 0);
+  const total = subtotal + (subtotal * taxRate);
+  
+  el.innerHTML = `
+    <!-- BARCODE SCANNER INPUT (auto-focused) -->
+    <div style="position:relative;margin-bottom:12px;">
+      <input type="text" id="scanInput" placeholder="🔍 Scan barcode or type SKU..." 
+        style="font-size:1em;padding:14px;text-align:center;border:2px solid #2ed573;background:#0f3460;"
+        onkeypress="if(event.key==='Enter'){addToCart(event.target.value);event.target.value='';}">
+      <small style="color:#2ed573;display:block;text-align:center;margin-top:4px;">📷 Scanner Ready — Point & Scan</small>
+    </div>
+    
+    <!-- QUICK PRODUCT GRID -->
+    <div class="product-grid">
+      ${myProducts.slice(0, 8).map(p => `
+        <div class="product-card" onclick="addToCart('${p.sku}')">
+          <strong>${p.name}</strong>
+          <div style="color:#9b8fff;">${formatCurrency(p.price)}</div>
+          <small>Stock: ${p.stock} ${p.barcode ? '| 📷'+p.barcode.slice(-4) : ''}</small>
+        </div>
+      `).join('')}
+    </div>
+    
+    <!-- SEARCH ALL PRODUCTS -->
+    <input type="text" id="searchInput" placeholder="🔍 Search all products..." 
+      style="margin-top:8px;"
+      oninput="searchProducts(this.value)">
+    <div id="searchResults"></div>
+    
+    <!-- CART -->
+    <div class="card" style="margin-top:10px;">
+      <h4>🛒 Cart (${cart.length})</h4>
+      ${cart.map((item, i) => `
+        <div class="cart-item">
+          <span>${item.name} x${item.quantity}</span>
+          <span>${formatCurrency(item.price * item.quantity)}</span>
+          <button class="btn btn-danger btn-xs" onclick="removeFromCart(${i})">✕</button>
+        </div>
+      `).join('') || '<p style="color:#a0a0b0;">Empty — Scan a barcode or tap a product</p>'}
+      
+      <hr style="border-color:#2a3a5e;">
+      <div style="font-size:1.3em;text-align:right;">
+        <strong>Total: <span style="color:#9b8fff;">${formatCurrency(total)}</span></strong>
+      </div>
+      
+      ${cart.length > 0 ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+          <button class="btn btn-success" onclick="processPayment('cash')">💵 Cash</button>
+          <button class="btn btn-primary" onclick="processPayment('card')">💳 Card</button>
+        </div>
+        <button class="btn btn-danger btn-block btn-sm" onclick="cart=[];switchView('pos')">🗑️ Clear Cart</button>
+      ` : ''}
+    </div>
+  `;
+  
+  // Auto-focus the scanner input
+  setTimeout(() => {
+    const scanInput = document.getElementById('scanInput');
+    if (scanInput) scanInput.focus();
+  }, 100);
+}
+
+// Product search function (for manual lookup)
+function searchProducts(query) {
+  const results = document.getElementById('searchResults');
+  if (!results) return;
+  
+  if (!query || query.length < 2) {
+    results.innerHTML = '';
+    return;
+  }
+  
+  const myProducts = getMyData('products').filter(p => p.active);
+  const matches = myProducts.filter(p => 
+    p.name.toLowerCase().includes(query.toLowerCase()) ||
+    p.sku.toLowerCase().includes(query.toLowerCase()) ||
+    (p.barcode && p.barcode.includes(query))
+  ).slice(0, 5);
+  
+  results.innerHTML = matches.map(p => `
+    <div class="product-card" onclick="addToCart('${p.sku}');document.getElementById('searchInput').value='';searchProducts('');" 
+         style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <strong>${p.name}</strong>
+        <small style="display:block;color:#a0a0b0;">SKU: ${p.sku} ${p.barcode ? '| 📷'+p.barcode : ''}</small>
+      </div>
+      <div style="color:#9b8fff;font-weight:bold;">${formatCurrency(p.price)}</div>
+    </div>
+  `).join('');
 }
 function addToCart(sku){const p=getMyData('products').find(p=>(p.sku===sku||p.barcode===sku)&&p.active);if(p&&p.stock>0){const e=cart.find(i=>i.sku===p.sku);e?e.quantity++:cart.push({...p,quantity:1});switchView('pos')}else{alert('Not found or out of stock!')}}
 function removeFromCart(i){cart.splice(i,1);switchView('pos')}
