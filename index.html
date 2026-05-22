@@ -739,6 +739,25 @@ function renderPOS(el){
         <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 12px;"><span style="color:var(--text-muted);font-size:.82em;">Subtotal</span><span style="font-size:.9em;">${formatCurrency(subtotal)}</span></div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;"><span style="color:var(--text-muted);font-size:.82em;">Tax (${(taxRate*100).toFixed(0)}%)</span><span style="font-size:.9em;">${formatCurrency(subtotal*taxRate)}</span></div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;"><span style="font-family:var(--font-display);font-weight:700;">Total</span><span style="font-family:var(--font-display);font-size:1.35em;font-weight:800;color:var(--accent-gold);">${formatCurrency(total)}</span></div>
+        <div style="margin-bottom:12px;">
+          <div style="font-size:.72em;color:var(--text-muted);font-family:var(--font-display);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;">Cash Tendered</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="number" id="cashTendered" placeholder="0.00" step="0.01" min="0"
+              style="margin-bottom:0;font-family:var(--font-mono);font-size:1.05em;text-align:right;border-color:var(--accent-emerald);"
+              oninput="updateChange(${total})" onkeypress="if(event.key==='Enter')processPayment('cash')">
+            <button class="btn btn-success btn-sm" style="white-space:nowrap;flex-shrink:0;" onclick="document.getElementById('cashTendered').value=${total.toFixed(2)};updateChange(${total})">Exact</button>
+          </div>
+          <div id="quickCash" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;">
+            ${getQuickCashAmounts(total).map(a=>`<button onclick="document.getElementById('cashTendered').value=${a};updateChange(${total})" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;color:var(--text-primary);font-family:var(--font-mono);font-size:.75em;transition:all .15s;" onmouseover="this.style.borderColor='var(--accent-emerald)'" onmouseout="this.style.borderColor='var(--border)'">${fc(a)}</button>`).join('')}
+          </div>
+          <div id="changeDisplay" style="margin-top:10px;padding:10px 14px;border-radius:var(--radius-md);background:var(--bg-elevated);border:1px solid var(--border);display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:.78em;color:var(--text-muted);">Change</span>
+              <span id="changeAmount" style="font-family:var(--font-display);font-size:1.3em;font-weight:800;color:var(--accent-emerald);">0.00</span>
+            </div>
+          </div>
+          <div id="insufficientMsg" style="margin-top:6px;font-size:.75em;color:var(--accent-rose);font-weight:600;display:none;">⚠ Insufficient amount</div>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <button class="btn btn-success" onclick="processPayment('cash')">💵 Cash</button>
           <button class="btn btn-primary" onclick="processPayment('card')">💳 Card</button>
