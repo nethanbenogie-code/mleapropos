@@ -1733,6 +1733,54 @@ function showLowStockToast(){
   setTimeout(()=>{if(toast.parentElement){toast.style.opacity='0';toast.style.transition='opacity .4s';setTimeout(()=>toast.remove(),400)}},7000);
 }
 
+// ── Show expiry warning toast on login ──
+function showExpiryToast() {
+  const { expired, soon } = getExpiryWarnings();
+  const items = [...expired, ...soon];
+  if (items.length === 0) return;
+
+  const existing = document.getElementById('expiryToast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'expiryToast';
+  toast.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--bg-elevated);border:1px solid ${expired.length > 0 ? 'var(--accent-rose)' : '#fbb923'};border-radius:var(--radius-md);padding:14px 18px;z-index:9999;display:flex;align-items:center;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,0.5);animation:slideUp .4s cubic-bezier(0.22,1,0.36,1);max-width:320px;width:90%;`;
+  
+  toast.innerHTML = `
+    <span style="font-size:1.4em;">${expired.length > 0 ? '🚫' : '⏰'}</span>
+    <div style="flex:1;">
+      <div style="font-family:var(--font-display);font-weight:700;font-size:.88em;color:${expired.length > 0 ? 'var(--accent-rose)' : '#fbb923'};">
+        ${expired.length > 0 ? expired.length + ' expired product(s)!' : soon.length + ' product(s) expiring soon'}
+      </div>
+      <div style="font-size:.72em;color:var(--text-muted);margin-top:2px;">
+        ${items.slice(0,2).map(p => p.name + ' (' + p.expiryDate + ')').join(', ')}${items.length > 2 ? ' +more' : ''}
+      </div>
+    </div>
+    <button onclick="this.parentElement.remove();switchView('${currentUser?.role === 'admin' ? 'allProducts' : 'inventory'}');" style="background:${expired.length > 0 ? 'var(--accent-rose-soft)' : 'rgba(251,189,35,0.15)'};border:1px solid ${expired.length > 0 ? 'rgba(240,101,119,0.3)' : 'rgba(251,189,35,0.3)'};color:${expired.length > 0 ? 'var(--accent-rose)' : '#fbb923'};border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:.7em;font-weight:700;white-space:nowrap;">View →</button>
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1em;padding:2px 4px;">✕</button>
+  `;
+  
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentElement) {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity .4s';
+      setTimeout(() => toast.remove(), 400);
+    }
+  }, 10000);
+}
+
+// ── Quick cash amount buttons ──
+function getQuickCashAmounts(total) {
+  const amounts = [];
+  const steps = [50, 100, 200, 500, 1000];
+  for (const s of steps) {
+    if (s >= total) amounts.push(s);
+  }
+  if (amounts.length === 0) amounts.push(Math.ceil(total / 100) * 100);
+  return amounts.slice(0, 4);
+}
+    
 // ═══════════════════ MODAL SYSTEM ═══════════════════
 function showModal(type,id){
   const suppliers=DB.getAll('suppliers');
