@@ -417,8 +417,8 @@ function getBIRSettings(){
     orSeriesPrefix:get('bir_or_prefix')||'OR',
     orSeriesFrom:get('bir_or_from')||'0000001',
     orSeriesTo:get('bir_or_to')||'9999999',
-    vatType:get('bir_vat_type')||'vat',
-    siType:get('bir_si_type')||'or',
+    vatType:get('bir_vat_type')||'vat', // 'vat' or 'nonvat'
+    siType:get('bir_si_type')||'or', // 'or' = Official Receipt, 'si' = Sales Invoice
   };
 }
 function getNextORNumber(){
@@ -443,10 +443,15 @@ function updateGrandAccumulatedTotal(amount){
 function getGrandAccumulatedTotal(){
   return parseFloat(DB.getAll('settings').find(s=>s.key==='bir_grand_total')?.value||'0');
 }
+function getDailyAccumulatedTotal(){
+  const today=new Date().toISOString().split('T')[0];
+  return DB.getAll('sales').filter(s=>s.date===today&&!s.voided).reduce((a,s)=>a+s.total,0);
+}
 
+// ─── VAT Computation (BIR-compliant) ───
 function computeVAT(total,vatType,taxRate){
   if(vatType==='vat'){
-    const vatableSales=total/(1+taxRate);
+    const vatableSales=total/(1+taxRate); // back-compute from VAT-inclusive total
     const vatAmount=total-vatableSales;
     return{vatableSales,vatAmount,vatExempt:0,zeroRated:0,grandTotal:total};
   } else {
@@ -456,7 +461,7 @@ function computeVAT(total,vatType,taxRate){
 
 let currentUser=null,currentView='dashboard',currentCurrency='PHP',taxRate=0.12,lowStockThreshold=10,defaultPrintMode='ask',cart=[],selectedUserId=null,pinEntry='',users=[],branches=[],products=[],downloadPath='MLEA_Backups';
 let lastSaleData=null;
-let discountAmount=0,discountType='none';
+let discountAmount=0,discountType='none'; // 'none','sc','pwd','promo'
 
 function fc(a){const c=currencies[currentCurrency]||currencies['PHP'];return c.symbol+(c.decimals===0?Math.round(a).toLocaleString():parseFloat(a).toFixed(2))}
 function formatCurrency(a){return fc(a)}
@@ -470,45 +475,11 @@ function getMyData(key){
 }
 function logActivity(action,details){if(!currentUser)return;DB.add('activityLogs',{userId:currentUser.id,userName:currentUser.name,userRole:currentUser.role,branchId:currentUser.branchId,action,details,timestamp:new Date().toISOString()})}
 
-// ═══════════════════ PHARMACY HELPERS ═══════════════════
-function isExpired(expiryDate){
-  if(!expiryDate)return false;
-  const today=new Date();today.setHours(0,0,0,0);
-  return new Date(expiryDate+'T00:00:00')<today;
-}
-function expiresWithin(expiryDate,days=30){
-  if(!expiryDate)return false;
-  const today=new Date();today.setHours(0,0,0,0);
-  const exp=new Date(expiryDate+'T00:00:00');
-  const diff=(exp-today)/(1000*60*60*24);
-  return diff>=0&&diff<=days;
-}
-function getTotalPieces(product){
-  // total pieces = stock * piecesPerBox (if piecesPerBox>0), else stock
-  const ppb=product.piecesPerBox||0;
-  return ppb>0?product.stock*ppb:product.stock;
-}
-function getExpiryWarnings(){
-  const prods=getMyData('products').filter(p=>p.active);
-  const expired=prods.filter(p=>isExpired(p.expiryDate));
-  const soon=prods.filter(p=>expiresWithin(p.expiryDate,30));
-  return{expired,soon};
-}
-
-// ═══════════════════ INIT APP ═══════════════════
 function initApp(){
   users=DB.getAll('users');branches=DB.getAll('branches');products=DB.getAll('products');
   if(branches.length===0){DB.add('branches',{name:'Main Branch',address:'Head Office',phone:'555-0000'});branches=DB.getAll('branches')}
   if(users.length===0){DB.add('users',{name:'Admin',role:'admin',active:true,pin:'1234',branchId:null});users=DB.getAll('users')}
-  if(products.length===0){
-    DB.add('products',{
-      sku:'SKU001',name:'Sample Medicine',genericName:'Paracetamol',price:99.99,cost:50,
-      stock:50,category:'Medicine',unit:'tablet',active:true,barcode:'123456789',
-      branchId:null,supplierId:null,vatExempt:false,zeroRated:false,
-      lotNumber:'LOT123',expiryDate:'2026-12-31',piecesPerBox:100
-    });
-    products=DB.getAll('products');
-  }
+  if(products.length===0){DB.add('products',{sku:'SKU001',name:'Sample Product',price:99.99,cost:50,stock:50,category:'General',active:true,barcode:'123456789',branchId:null,supplierId:null,vatExempt:false,zeroRated:false});products=DB.getAll('products')}
   if(DB.getAll('suppliers').length===0){DB.add('suppliers',{name:'Sample Supplier',contact:'John Doe',phone:'555-0001',email:'supplier@email.com',address:'123 Supplier St'})}
   DB.getAll('settings').forEach(s=>{
     if(s.key==='currency')currentCurrency=s.value;
@@ -518,6 +489,28 @@ function initApp(){
     if(s.key==='defaultPrintMode')defaultPrintMode=s.value||'ask';
   });
   renderLoginScreen();
+}
+
+// ═══════════════════ DISCOUNT HELPERS ═══════════════════
+function getQuickCashAmounts(total){
+  const amounts=[];const steps=[50,100,200,500,1000];
+  steps.forEach(s=>{if(s>=total)amounts.push(s)});
+  if(amounts.length===0)amounts.push(Math.ceil(total/100)*100);
+  return amounts.slice(0,4);
+}
+function updateChange(total){
+  const cash=parseFloat(document.getElementById('cashTendered')?.value)||0;
+  const cd=document.getElementById('changeDisplay'),ca=document.getElementById('changeAmount'),im=document.getElementById('insufficientMsg');
+  if(!cd)return;
+  if(cash>=total){cd.style.display='block';ca.textContent=fc(cash-total);im&&(im.style.display='none');}
+  else{cd.style.display='none';im&&(im.style.display='block');}
+}
+function applyDiscount(type){
+  const subtotal=cart.reduce((s,i)=>s+(i.price*i.quantity),0);
+  if(type==='sc'||type==='pwd'){discountType=type;discountAmount=subtotal*0.20;}
+  else if(type==='promo'){const pct=parseFloat(prompt('Enter promo discount %:'))||0;discountType='promo';discountAmount=subtotal*(pct/100);}
+  else{discountType='none';discountAmount=0;}
+  switchView('pos');
 }
 
 // ═══════════════════ LOGIN ═══════════════════
@@ -545,7 +538,6 @@ function submitPin(){
     renderSidebar();pinEntry='';selectedUserId=null;updatePinDisplay();document.getElementById('errorMessage').textContent='';
     switchView('dashboard');
     setTimeout(showLowStockToast,600);
-    setTimeout(showExpiryToast,800);
   } else {
     document.getElementById('errorMessage').textContent='Incorrect PIN';pinEntry='';updatePinDisplay();
     document.querySelectorAll('.pin-dot').forEach(d=>d.classList.add('error'));
@@ -648,7 +640,6 @@ function renderDashboard(el){
   const lowItems=getLowStockItems();
   const gat=getGrandAccumulatedTotal();
   const bir=getBIRSettings();
-  const {expired,soon}=getExpiryWarnings();
 
   el.innerHTML=`
     <div class="welcome-card">
@@ -668,6 +659,10 @@ function renderDashboard(el){
       <div class="metric-card"><div class="metric-value">${formatCurrency(monthSales)}</div><div class="metric-label">Monthly Revenue</div></div>
       <div class="metric-card"><div class="metric-value">${myProducts.filter(p=>p.active).length}</div><div class="metric-label">Active Products</div></div>
     </div>
+    <div class="metrics" style="margin-top:8px;">
+      <div class="metric-card"><div class="metric-value" style="color:var(--accent-rose);">${formatCurrency(totalCost)}</div><div class="metric-label">Inventory Cost</div></div>
+      <div class="metric-card"><div class="metric-value" style="color:var(--accent-emerald);">${formatCurrency(totalValue-totalCost)}</div><div class="metric-label">Potential Profit</div></div>
+    </div>
     <div class="card" style="border-left:3px solid var(--accent-gold);margin-top:12px;">
       <h5 style="color:var(--accent-gold);">🏛️ BIR Status</h5>
       <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:.78em;"><span style="color:var(--text-muted);">TIN</span><span style="font-family:var(--font-mono);">${bir.tin}</span></div>
@@ -675,8 +670,6 @@ function renderDashboard(el){
       <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:.78em;"><span style="color:var(--text-muted);">Grand Accum. Total</span><span style="font-family:var(--font-display);color:var(--accent-gold);font-weight:700;">${formatCurrency(gat)}</span></div>
       <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:.78em;"><span style="color:var(--text-muted);">VAT Type</span><span style="color:var(--accent-emerald);font-weight:600;">${bir.vatType==='vat'?'VAT-Registered (12%)':'Non-VAT'}</span></div>
     </div>
-    ${expired.length>0?`<div class="card" style="border-left:3px solid var(--accent-rose);margin-top:12px;"><h5 style="color:var(--accent-rose);">🚫 Expired Products (${expired.length})</h5>${expired.slice(0,3).map(p=>`<div style="display:flex;justify-content:space-between;font-size:.78em;"><span>${p.name}</span><span style="font-family:var(--font-mono);color:var(--accent-rose);">EXP ${p.expiryDate}</span></div>`).join('')}</div>`:''}
-    ${soon.length>0?`<div class="card" style="border-left:3px solid #fbb923;margin-top:12px;"><h5 style="color:#fbb923;">⏰ Expiring Soon (${soon.length})</h5>${soon.slice(0,3).map(p=>`<div style="display:flex;justify-content:space-between;font-size:.78em;"><span>${p.name}</span><span style="font-family:var(--font-mono);color:#fbb923;">${p.expiryDate}</span></div>`).join('')}</div>`:''}
     ${lowItems.length>0?`<div class="card" style="border-left:3px solid var(--accent-rose);margin-top:12px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><h5 style="margin-bottom:0;color:var(--accent-rose);">⚠️ Low Stock</h5>${currentUser.role!=='cashier'?`<button class="btn btn-danger btn-xs" onclick="switchView('${currentUser.role==='admin'?'allProducts':'inventory'}')">View All</button>`:''}</div>${lowItems.slice(0,4).map(p=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);"><span style="font-size:.78em;">${p.name}</span><span style="font-family:var(--font-mono);font-size:.75em;color:${p.stock===0?'var(--accent-rose)':'#fbb923'};font-weight:700;">${p.stock===0?'OUT':p.stock}</span></div>`).join('')}${lowItems.length>4?`<p style="font-size:.7em;color:var(--text-muted);margin-top:6px;text-align:center;">+${lowItems.length-4} more</p>`:''}</div>`:''}
     <div style="margin-top:14px;">
       <button class="btn btn-primary btn-block" onclick="switchView('pos')" style="font-size:1em;padding:16px;letter-spacing:.05em;">💳 Start New Sale</button>
@@ -684,7 +677,7 @@ function renderDashboard(el){
     </div>`;
 }
 
-// ═══════════════════ POS (PHARMACY READY) ═══════════════════
+// ═══════════════════ POS ═══════════════════
 function renderPOS(el){
   const myProducts=getMyData('products').filter(p=>p.active);
   const subtotalBeforeDiscount=cart.reduce((s,i)=>s+(i.price*i.quantity),0);
@@ -701,14 +694,15 @@ function renderPOS(el){
     </div>
     <div class="scan-input-wrap"><input type="text" id="scanInput" placeholder="Scan barcode or enter SKU…" onkeypress="if(event.key==='Enter'){addToCart(event.target.value);event.target.value='';}"></div>
     <div class="scan-hint">⚡ Scanner Ready — Point & Scan</div>
-    <div class="product-grid" style="margin-top:12px;">${myProducts.slice(0,8).map(p=>`<div class="product-card" onclick="addToCart('${p.sku}')"><strong>${p.name}${p.genericName?' ('+p.genericName+')':''}</strong><div class="price">${formatCurrency(p.price)}</div><small>Stock: ${getTotalPieces(p)} ${p.unit||'pcs'}${p.expiryDate?' · EXP '+p.expiryDate:''}${p.lotNumber?' · LOT '+p.lotNumber:''}</small></div>`).join('')}</div>
+    <div class="product-grid" style="margin-top:12px;">${myProducts.slice(0,8).map(p=>`<div class="product-card" onclick="addToCart('${p.sku}')"><strong>${p.name}</strong><div class="price">${formatCurrency(p.price)}</div><small>Stock: ${p.stock}${p.barcode?' 📷':''}${p.vatExempt?' · VAT-Exempt':''}${p.zeroRated?' · 0-Rated':''}</small></div>`).join('')}</div>
     <div class="card" style="margin-top:4px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <h4 style="margin-bottom:0;">Cart</h4>
         <span style="font-size:.75em;color:var(--text-muted);">${cart.length} item${cart.length!==1?'s':''}</span>
       </div>
-      ${cart.map((item,i)=>`<div class="cart-item"><div style="flex:1;min-width:0;"><div style="font-size:.85em;font-weight:500;">${item.name}${item.genericName?' ('+item.genericName+')':''}${item.vatExempt?'<span style="font-size:.65em;color:var(--accent-blue);margin-left:5px;">VAT-Ex</span>':''}${item.zeroRated?'<span style="font-size:.65em;color:var(--accent-emerald);margin-left:5px;">0%</span>':''}</div><div style="font-size:.72em;color:var(--text-muted);">×${item.quantity} ${item.unit||'pcs'} @ ${formatCurrency(item.price)}</div>${item.lotNumber?`<div style="font-size:.65em;color:var(--text-muted);">LOT: ${item.lotNumber}</div>`:''}</div><div style="font-family:var(--font-display);color:var(--accent-gold);font-weight:700;font-size:.9em;">${formatCurrency(item.price*item.quantity)}</div><button class="btn btn-danger btn-xs" onclick="removeFromCart(${i})" style="margin-left:8px;">✕</button></div>`).join('')||'<div class="empty-state" style="padding:25px 10px;"><div class="empty-icon">🛒</div><p>Cart is empty</p></div>'}
+      ${cart.map((item,i)=>`<div class="cart-item"><div style="flex:1;min-width:0;"><div style="font-size:.85em;font-weight:500;">${item.name}${item.vatExempt?'<span style="font-size:.65em;color:var(--accent-blue);margin-left:5px;">VAT-Ex</span>':''}${item.zeroRated?'<span style="font-size:.65em;color:var(--accent-emerald);margin-left:5px;">0%</span>':''}</div><div style="font-size:.72em;color:var(--text-muted);">×${item.quantity} @ ${formatCurrency(item.price)}</div></div><div style="font-family:var(--font-display);color:var(--accent-gold);font-weight:700;font-size:.9em;">${formatCurrency(item.price*item.quantity)}</div><button class="btn btn-danger btn-xs" onclick="removeFromCart(${i})" style="margin-left:8px;">✕</button></div>`).join('')||'<div class="empty-state" style="padding:25px 10px;"><div class="empty-icon">🛒</div><p>Cart is empty</p></div>'}
       ${cart.length>0?`
+        <!-- DISCOUNT SECTION -->
         <div class="divider"></div>
         <div style="margin-bottom:10px;">
           <div style="font-size:.68em;color:var(--text-muted);font-family:var(--font-display);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">BIR Discount</div>
@@ -720,6 +714,7 @@ function renderPOS(el){
           </div>
         </div>
         <div class="divider"></div>
+        <!-- TOTALS -->
         <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span style="color:var(--text-muted);font-size:.82em;">Subtotal</span><span style="font-size:.9em;">${formatCurrency(subtotalBeforeDiscount)}</span></div>
         ${effectiveDiscount>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span style="color:var(--accent-emerald);font-size:.82em;">${discountType==='sc'?'👴 SC Discount':discountType==='pwd'?'♿ PWD Discount':'🏷️ Promo Discount'}</span><span style="font-size:.9em;color:var(--accent-emerald);">- ${formatCurrency(effectiveDiscount)}</span></div>`:''}
         ${bir.vatType==='vat'?`
@@ -727,6 +722,7 @@ function renderPOS(el){
         <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span style="color:var(--text-muted);font-size:.82em;">VAT (12%)</span><span style="font-size:.82em;">${formatCurrency(vatData.vatAmount)}</span></div>
         `:`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span style="color:var(--text-muted);font-size:.82em;">VAT-Exempt Sales</span><span style="font-size:.82em;">${formatCurrency(subtotal)}</span></div>`}
         <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-top:1px solid var(--border);margin-top:6px;padding-top:10px;"><span style="font-family:var(--font-display);font-weight:700;">TOTAL</span><span style="font-family:var(--font-display);font-size:1.35em;font-weight:800;color:var(--accent-gold);">${formatCurrency(total)}</span></div>
+        <!-- CASH TENDERED -->
         <div style="margin-bottom:12px;">
           <div style="font-size:.72em;color:var(--text-muted);font-family:var(--font-display);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;">Cash Tendered</div>
           <div style="display:flex;gap:8px;align-items:center;">
@@ -750,24 +746,11 @@ function renderPOS(el){
     </div>`;
   setTimeout(()=>{const si=document.getElementById('scanInput');if(si)si.focus()},100);
 }
-
 function addToCart(sku){
   const p=getMyData('products').find(p=>(p.sku===sku||p.barcode===sku)&&p.active);
-  if(!p){alert('Product not found!');return;}
-  if(p.stock<=0){alert('Out of stock!');return;}
-  if(isExpired(p.expiryDate)){alert('Cannot sell expired product: '+p.name);return;}
-  if(expiresWithin(p.expiryDate,30)&&!confirm(p.name+' expires on '+p.expiryDate+'. Sell anyway?'))return;
-  // Selling by piece: if piecesPerBox>0, stock is boxes, but we sell pieces. We treat stock as total pieces when piecesPerBox>0.
-  // Actually easier: let stock field represent pieces if piecesPerBox>0, else it's the unit (box/bottle). We'll keep stock as pieces internally.
-  const existing=cart.find(i=>i.sku===p.sku);
-  if(existing){existing.quantity++;}
-  else{cart.push({...p,quantity:1});}
-  switchView('pos');
+  if(p&&p.stock>0){const e=cart.find(i=>i.sku===p.sku);e?e.quantity++:cart.push({...p,quantity:1});switchView('pos');}
+  else{alert('Product not found or out of stock!')}
 }
-
-// ... (all other functions remain exactly the same — branches, suppliers, POs, users, sales, BIR, reports, backup, settings, etc.)
-// The rest of your original script (from renderBranches down to the Firebase boot and showLicenseGate) is unchanged.
-// I have omitted them here for brevity but they are still part of the file.
 function removeFromCart(i){cart.splice(i,1);if(cart.length===0){discountAmount=0;discountType='none';}switchView('pos')}
 function voidCurrentCart(){if(cart.length===0)return;if(!confirm('Void entire cart?'))return;cart=[];discountAmount=0;discountType='none';switchView('pos');}
 
