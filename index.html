@@ -679,64 +679,50 @@ function renderDashboard(el){
 
 // ═══════════════════ POS ═══════════════════
 function renderPOS(el){
-  const myProducts = getMyData('products').filter(p => p.active);
-  const subtotalBeforeDiscount = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
-  const effectiveDiscount = Math.min(discountAmount, subtotalBeforeDiscount);
-  const subtotal = subtotalBeforeDiscount - effectiveDiscount;
-  const bir = getBIRSettings();
-  const vatData = computeVAT(subtotal + subtotal * taxRate, bir.vatType, taxRate);
-  const total = vatData.grandTotal;
+  const myProducts=getMyData('products').filter(p=>p.active);
+  const subtotalBeforeDiscount=cart.reduce((s,i)=>s+(i.price*i.quantity),0);
+  const effectiveDiscount=Math.min(discountAmount,subtotalBeforeDiscount);
+  const subtotal=subtotalBeforeDiscount-effectiveDiscount;
+  const bir=getBIRSettings();
+  const vatData=computeVAT(subtotal+subtotal*taxRate,bir.vatType,taxRate);
+  const total=vatData.grandTotal;
 
-  let html = `
+  el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
       <h4 style="margin:0;">POS Terminal</h4>
-      <span class="bir-badge">🏛️ ${bir.vatType === 'vat' ? 'VAT' : 'Non-VAT'} · ${bir.siType === 'si' ? 'Sales Invoice' : 'Official Receipt'}</span>
+      <span class="bir-badge">🏛️ ${bir.vatType==='vat'?'VAT':'Non-VAT'} · ${bir.siType==='si'?'Sales Invoice':'Official Receipt'}</span>
     </div>
     <div class="scan-input-wrap"><input type="text" id="scanInput" placeholder="Scan barcode or enter SKU…" onkeypress="if(event.key==='Enter'){addToCart(event.target.value);event.target.value='';}"></div>
     <div class="scan-hint">⚡ Scanner Ready — Point & Scan</div>
-    <div class="product-grid" style="margin-top:12px;">
-      ${myProducts.slice(0, 8).map(p => `
-        <div class="product-card" onclick="addToCart('${p.sku}')">
-          <strong>${p.name || 'Unnamed'}</strong>
-          <div class="price">${formatCurrency(p.price || 0)}</div>
-          <small>Stock: ${p.stock || 0}${p.barcode ? ' 📷' : ''}${p.vatExempt ? ' · VAT-Exempt' : ''}${p.zeroRated ? ' · 0-Rated' : ''}</small>
-        </div>
-      `).join('')}
-    </div>
+    <div class="product-grid" style="margin-top:12px;">${myProducts.slice(0,8).map(p=>`<div class="product-card" onclick="addToCart('${p.sku}')"><strong>${p.name}</strong><div class="price">${formatCurrency(p.price)}</div><small>Stock: ${p.stock}${p.barcode?' 📷':''}${p.vatExempt?' · VAT-Exempt':''}${p.zeroRated?' · 0-Rated':''}</small></div>`).join('')}</div>
     <div class="card" style="margin-top:4px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <h4 style="margin-bottom:0;">Cart</h4>
-        <span style="font-size:.75em;color:var(--text-muted);">${cart.length} item${cart.length !== 1 ? 's' : ''}</span>
+        <span style="font-size:.75em;color:var(--text-muted);">${cart.length} item${cart.length!==1?'s':''}</span>
       </div>
-      ${cart.length > 0 ? cart.map((item, i) => `
-        <div class="cart-item">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:.85em;font-weight:500;">${item.name || 'Item'}${item.vatExempt ? ' <span style="font-size:.65em;color:var(--accent-blue);margin-left:5px;">VAT-Ex</span>' : ''}${item.zeroRated ? ' <span style="font-size:.65em;color:var(--accent-emerald);margin-left:5px;">0%</span>' : ''}</div>
-            <div style="font-size:.72em;color:var(--text-muted);">×${item.quantity || 1} @ ${formatCurrency(item.price || 0)}</div>
-          </div>
-          <div style="font-family:var(--font-display);color:var(--accent-gold);font-weight:700;font-size:.9em;">${formatCurrency((item.price || 0) * (item.quantity || 1))}</div>
-          <button class="btn btn-danger btn-xs" onclick="removeFromCart(${i})" style="margin-left:8px;">✕</button>
-        </div>
-      `).join('') : '<div class="empty-state" style="padding:25px 10px;"><div class="empty-icon">🛒</div><p>Cart is empty — tap a product or scan barcode</p></div>'}
-      ${cart.length > 0 ? `
+      ${cart.map((item,i)=>`<div class="cart-item"><div style="flex:1;min-width:0;"><div style="font-size:.85em;font-weight:500;">${item.name}${item.vatExempt?'<span style="font-size:.65em;color:var(--accent-blue);margin-left:5px;">VAT-Ex</span>':''}${item.zeroRated?'<span style="font-size:.65em;color:var(--accent-emerald);margin-left:5px;">0%</span>':''}</div><div style="font-size:.72em;color:var(--text-muted);">×${item.quantity} @ ${formatCurrency(item.price)}</div></div><div style="font-family:var(--font-display);color:var(--accent-gold);font-weight:700;font-size:.9em;">${formatCurrency(item.price*item.quantity)}</div><button class="btn btn-danger btn-xs" onclick="removeFromCart(${i})" style="margin-left:8px;">✕</button></div>`).join('')||'<div class="empty-state" style="padding:25px 10px;"><div class="empty-icon">🛒</div><p>Cart is empty</p></div>'}
+      ${cart.length>0?`
+        <!-- DISCOUNT SECTION -->
         <div class="divider"></div>
         <div style="margin-bottom:10px;">
           <div style="font-size:.68em;color:var(--text-muted);font-family:var(--font-display);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">BIR Discount</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button onclick="applyDiscount('sc')" style="padding:5px 10px;border-radius:8px;border:1px solid ${discountType === 'sc' ? 'var(--accent-gold)' : 'var(--border)'};background:${discountType === 'sc' ? 'var(--accent-gold-soft)' : 'var(--bg-glass)'};color:${discountType === 'sc' ? 'var(--accent-gold)' : 'var(--text-secondary)'};cursor:pointer;font-size:.7em;font-weight:600;font-family:var(--font-display);">👴 SC (20%)</button>
-            <button onclick="applyDiscount('pwd')" style="padding:5px 10px;border-radius:8px;border:1px solid ${discountType === 'pwd' ? 'var(--accent-gold)' : 'var(--border)'};background:${discountType === 'pwd' ? 'var(--accent-gold-soft)' : 'var(--bg-glass)'};color:${discountType === 'pwd' ? 'var(--accent-gold)' : 'var(--text-secondary)'};cursor:pointer;font-size:.7em;font-weight:600;font-family:var(--font-display);">♿ PWD (20%)</button>
-            <button onclick="applyDiscount('promo')" style="padding:5px 10px;border-radius:8px;border:1px solid ${discountType === 'promo' ? 'var(--accent-blue)' : 'var(--border)'};background:${discountType === 'promo' ? 'var(--accent-blue-soft)' : 'var(--bg-glass)'};color:${discountType === 'promo' ? 'var(--accent-blue)' : 'var(--text-secondary)'};cursor:pointer;font-size:.7em;font-weight:600;font-family:var(--font-display);">🏷️ Promo</button>
-            ${discountType !== 'none' ? `<button onclick="applyDiscount('none')" style="padding:5px 10px;border-radius:8px;border:1px solid var(--accent-rose);background:var(--accent-rose-soft);color:var(--accent-rose);cursor:pointer;font-size:.7em;font-weight:600;font-family:var(--font-display);">✕ Remove</button>` : ''}
+            <button onclick="applyDiscount('sc')" style="padding:5px 10px;border-radius:8px;border:1px solid ${discountType==='sc'?'var(--accent-gold)':'var(--border)'};background:${discountType==='sc'?'var(--accent-gold-soft)':'var(--bg-glass)'};color:${discountType==='sc'?'var(--accent-gold)':'var(--text-secondary)'};cursor:pointer;font-size:.7em;font-weight:600;font-family:var(--font-display);">👴 SC (20%)</button>
+            <button onclick="applyDiscount('pwd')" style="padding:5px 10px;border-radius:8px;border:1px solid ${discountType==='pwd'?'var(--accent-gold)':'var(--border)'};background:${discountType==='pwd'?'var(--accent-gold-soft)':'var(--bg-glass)'};color:${discountType==='pwd'?'var(--accent-gold)':'var(--text-secondary)'};cursor:pointer;font-size:.7em;font-weight:600;font-family:var(--font-display);">♿ PWD (20%)</button>
+            <button onclick="applyDiscount('promo')" style="padding:5px 10px;border-radius:8px;border:1px solid ${discountType==='promo'?'var(--accent-blue)':'var(--border)'};background:${discountType==='promo'?'var(--accent-blue-soft)':'var(--bg-glass)'};color:${discountType==='promo'?'var(--accent-blue)':'var(--text-secondary)'};cursor:pointer;font-size:.7em;font-weight:600;font-family:var(--font-display);">🏷️ Promo</button>
+            ${discountType!=='none'?`<button onclick="applyDiscount('none')" style="padding:5px 10px;border-radius:8px;border:1px solid var(--accent-rose);background:var(--accent-rose-soft);color:var(--accent-rose);cursor:pointer;font-size:.7em;font-weight:600;font-family:var(--font-display);">✕ Remove</button>`:''}
           </div>
         </div>
         <div class="divider"></div>
+        <!-- TOTALS -->
         <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span style="color:var(--text-muted);font-size:.82em;">Subtotal</span><span style="font-size:.9em;">${formatCurrency(subtotalBeforeDiscount)}</span></div>
-        ${effectiveDiscount > 0 ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span style="color:var(--accent-emerald);font-size:.82em;">${discountType === 'sc' ? '👴 SC Discount' : discountType === 'pwd' ? '♿ PWD Discount' : '🏷️ Promo Discount'}</span><span style="font-size:.9em;color:var(--accent-emerald);">- ${formatCurrency(effectiveDiscount)}</span></div>` : ''}
-        ${bir.vatType === 'vat' ? `
+        ${effectiveDiscount>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span style="color:var(--accent-emerald);font-size:.82em;">${discountType==='sc'?'👴 SC Discount':discountType==='pwd'?'♿ PWD Discount':'🏷️ Promo Discount'}</span><span style="font-size:.9em;color:var(--accent-emerald);">- ${formatCurrency(effectiveDiscount)}</span></div>`:''}
+        ${bir.vatType==='vat'?`
         <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span style="color:var(--text-muted);font-size:.82em;">VATable Sales</span><span style="font-size:.82em;">${formatCurrency(vatData.vatableSales)}</span></div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span style="color:var(--text-muted);font-size:.82em;">VAT (12%)</span><span style="font-size:.82em;">${formatCurrency(vatData.vatAmount)}</span></div>
-        ` : `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span style="color:var(--text-muted);font-size:.82em;">VAT-Exempt Sales</span><span style="font-size:.82em;">${formatCurrency(subtotal)}</span></div>`}
+        `:`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span style="color:var(--text-muted);font-size:.82em;">VAT-Exempt Sales</span><span style="font-size:.82em;">${formatCurrency(subtotal)}</span></div>`}
         <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-top:1px solid var(--border);margin-top:6px;padding-top:10px;"><span style="font-family:var(--font-display);font-weight:700;">TOTAL</span><span style="font-family:var(--font-display);font-size:1.35em;font-weight:800;color:var(--accent-gold);">${formatCurrency(total)}</span></div>
+        <!-- CASH TENDERED -->
         <div style="margin-bottom:12px;">
           <div style="font-size:.72em;color:var(--text-muted);font-family:var(--font-display);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;">Cash Tendered</div>
           <div style="display:flex;gap:8px;align-items:center;">
@@ -744,7 +730,7 @@ function renderPOS(el){
             <button class="btn btn-success btn-sm" style="white-space:nowrap;flex-shrink:0;" onclick="document.getElementById('cashTendered').value=${total.toFixed(2)};updateChange(${total})">Exact</button>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;">
-            ${getQuickCashAmounts(total).map(a => `<button onclick="document.getElementById('cashTendered').value=${a};updateChange(${total})" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;color:var(--text-primary);font-family:var(--font-mono);font-size:.75em;transition:all .15s;" onmouseover="this.style.borderColor='var(--accent-emerald)'" onmouseout="this.style.borderColor='var(--border)'">${fc(a)}</button>`).join('')}
+            ${getQuickCashAmounts(total).map(a=>`<button onclick="document.getElementById('cashTendered').value=${a};updateChange(${total})" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;color:var(--text-primary);font-family:var(--font-mono);font-size:.75em;transition:all .15s;" onmouseover="this.style.borderColor='var(--accent-emerald)'" onmouseout="this.style.borderColor='var(--border)'">${fc(a)}</button>`).join('')}
           </div>
           <div id="changeDisplay" style="margin-top:10px;padding:10px 14px;border-radius:var(--radius-md);background:var(--bg-elevated);border:1px solid var(--border);display:none;">
             <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:.78em;color:var(--text-muted);">Change</span><span id="changeAmount" style="font-family:var(--font-display);font-size:1.3em;font-weight:800;color:var(--accent-emerald);">0.00</span></div>
@@ -756,40 +742,13 @@ function renderPOS(el){
           <button class="btn btn-primary" onclick="processPayment('card')">💳 Card</button>
         </div>
         <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="voidCurrentCart()">🚫 Void Cart</button>
-      ` : ''}
-    </div>
-  `;
-
-  el.innerHTML = html;
-
-  setTimeout(() => {
-    const si = document.getElementById('scanInput');
-    if (si) si.focus();
-  }, 100);
+      `:''}
+    </div>`;
+  setTimeout(()=>{const si=document.getElementById('scanInput');if(si)si.focus()},100);
 }
-
 function addToCart(sku){
-  const p = getMyData('products').find(p => (p.sku === sku || p.barcode === sku) && p.active);
-  
-  if (!p) {
-    alert('Product not found!');
-    return;
-  }
-  if (p.stock <= 0) {
-    alert('Out of stock!');
-    return;
-  }
-
-  const existing = cart.find(i => i.sku === p.sku);
-  if (existing) {
-    existing.quantity++;
-  } else {
-    cart.push({...p, quantity: 1});
-  }
-
-  // Re-render POS view
-  switchView('pos');
-}
+  const p=getMyData('products').find(p=>(p.sku===sku||p.barcode===sku)&&p.active);
+  if(p&&p.stock>0){const e=cart.find(i=>i.sku===p.sku);e?e.quantity++:cart.push({...p,quantity:1});switchView('pos');}
   else{alert('Product not found or out of stock!')}
 }
 function removeFromCart(i){cart.splice(i,1);if(cart.length===0){discountAmount=0;discountType='none';}switchView('pos')}
@@ -1733,54 +1692,6 @@ function showLowStockToast(){
   setTimeout(()=>{if(toast.parentElement){toast.style.opacity='0';toast.style.transition='opacity .4s';setTimeout(()=>toast.remove(),400)}},7000);
 }
 
-// ── Show expiry warning toast on login ──
-function showExpiryToast() {
-  const { expired, soon } = getExpiryWarnings();
-  const items = [...expired, ...soon];
-  if (items.length === 0) return;
-
-  const existing = document.getElementById('expiryToast');
-  if (existing) existing.remove();
-
-  const toast = document.createElement('div');
-  toast.id = 'expiryToast';
-  toast.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--bg-elevated);border:1px solid ${expired.length > 0 ? 'var(--accent-rose)' : '#fbb923'};border-radius:var(--radius-md);padding:14px 18px;z-index:9999;display:flex;align-items:center;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,0.5);animation:slideUp .4s cubic-bezier(0.22,1,0.36,1);max-width:320px;width:90%;`;
-  
-  toast.innerHTML = `
-    <span style="font-size:1.4em;">${expired.length > 0 ? '🚫' : '⏰'}</span>
-    <div style="flex:1;">
-      <div style="font-family:var(--font-display);font-weight:700;font-size:.88em;color:${expired.length > 0 ? 'var(--accent-rose)' : '#fbb923'};">
-        ${expired.length > 0 ? expired.length + ' expired product(s)!' : soon.length + ' product(s) expiring soon'}
-      </div>
-      <div style="font-size:.72em;color:var(--text-muted);margin-top:2px;">
-        ${items.slice(0,2).map(p => p.name + ' (' + p.expiryDate + ')').join(', ')}${items.length > 2 ? ' +more' : ''}
-      </div>
-    </div>
-    <button onclick="this.parentElement.remove();switchView('${currentUser?.role === 'admin' ? 'allProducts' : 'inventory'}');" style="background:${expired.length > 0 ? 'var(--accent-rose-soft)' : 'rgba(251,189,35,0.15)'};border:1px solid ${expired.length > 0 ? 'rgba(240,101,119,0.3)' : 'rgba(251,189,35,0.3)'};color:${expired.length > 0 ? 'var(--accent-rose)' : '#fbb923'};border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:.7em;font-weight:700;white-space:nowrap;">View →</button>
-    <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1em;padding:2px 4px;">✕</button>
-  `;
-  
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    if (toast.parentElement) {
-      toast.style.opacity = '0';
-      toast.style.transition = 'opacity .4s';
-      setTimeout(() => toast.remove(), 400);
-    }
-  }, 10000);
-}
-
-// ── Quick cash amount buttons ──
-function getQuickCashAmounts(total) {
-  const amounts = [];
-  const steps = [50, 100, 200, 500, 1000];
-  for (const s of steps) {
-    if (s >= total) amounts.push(s);
-  }
-  if (amounts.length === 0) amounts.push(Math.ceil(total / 100) * 100);
-  return amounts.slice(0, 4);
-}
-    
 // ═══════════════════ MODAL SYSTEM ═══════════════════
 function showModal(type,id){
   const suppliers=DB.getAll('suppliers');
