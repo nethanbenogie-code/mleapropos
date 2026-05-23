@@ -404,7 +404,7 @@ function showLicenseGate(){
     const s=document.getElementById('licenseStatus');
     try{const i=info?JSON.parse(info):null;s.textContent=i?'✓ Activated · Device '+i.deviceCount+' of '+i.maxDevices:'✓ System Activated';}catch(e){s.textContent='✓ Activated';}
     s.className='license-status success';
-    initApp();
+    await initApp();
   }else{
     document.getElementById('licenseGate').style.display='flex';
     document.getElementById('loginScreen').style.display='none';
@@ -1573,16 +1573,37 @@ document.addEventListener('keydown',function(e){
 });
 
 // ══════════════════════════════════════════════
-// BOOT
+// BOOT (Fixed)
 // ══════════════════════════════════════════════
 async function bootFirebase(){
-  const config=getSetting('firebase_config','');const mode=getSetting('storageMode','local');
-  if(mode==='firebase'&&config){
-    try{const cfg=JSON.parse(config);const ok=await FirebaseDB.init(cfg);if(ok){storageMode='firebase';updateSyncBar();}else{storageMode='local';setSyncStatus('offline','Firebase unavailable, using local');}}
-    catch(e){storageMode='local';}
+  const config = getSetting('firebase_config','');
+  const mode = getSetting('storageMode','local');
+  if(mode === 'firebase' && config){
+    try {
+      const cfg = JSON.parse(config);
+      const ok = await FirebaseDB.init(cfg);
+      if(ok){
+        storageMode = 'firebase';
+        updateSyncBar();
+      } else {
+        storageMode = 'local';
+        setSyncStatus('offline','Firebase unavailable, using local');
+      }
+    } catch(e) {
+      storageMode = 'local';
+    }
   }
 }
 
+// Patch initApp to also reconnect Firebase
+const _origInit = initApp;
+initApp = async function(){
+  _origInit();           // original synchronous setup
+  await bootFirebase();  // now connect Firebase if configured
+  updateSyncBar();
+};
+
+// Now start the app
 showLicenseGate();
 // Patch initApp to also reconnect Firebase
 const _origInit=initApp;
