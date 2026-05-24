@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MLEA Pharmacy Mode</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1220;color:#f0f0f5;font-family:'DM Sans',sans-serif;padding:20px}
+.wrap{max-width:1200px;margin:0 auto}
+.card{background:rgba(255,255,255,0.04);border-radius:20px;padding:18px;margin:10px 0}
+input,select,button{width:100%;padding:10px;margin:5px 0;border-radius:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff}
+.btn{background:#d4a853;color:#000;font-weight:bold;cursor:pointer}
+.btn-danger{background:#f06577}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>💊 Pharmacy Mode</h1>
+  <div class="card">
+    <h3>Prescription Details</h3>
+    <input type="text" id="rxNumber" placeholder="Prescription #">
+    <input type="text" id="doctor" placeholder="Doctor's Name">
+    <input type="date" id="expiryDate">
+    <label>Patient Type</label>
+    <select id="patientType">
+      <option value="regular">Regular</option>
+      <option value="senior">Senior Citizen (20% off)</option>
+      <option value="pwd">PWD (20% off)</option>
+    </select>
+  </div>
+  <div class="card">
+    <h3>Product Search</h3>
+    <input type="text" id="search" placeholder="Search by name or barcode..." oninput="searchProducts()">
+    <div id="productList" class="grid"></div>
+  </div>
+  <div class="card">
+    <h3>Prescription Cart</h3>
+    <div id="cartItems"></div>
+    <div id="cartTotal"></div>
+    <button class="btn" onclick="finalizeSale()">💊 Complete Sale (with Prescription)</button>
+  </div>
+</div>
+<script>
+// ========== SHARED STORAGE (same as main POS) ==========
+const STORES = ['products','sales','users','settings','branches','activityLogs','suppliers','purchaseOrders','voidedSales','heldSales','returns','customers'];
+const LocalDB={init(){STORES.forEach(s=>{if(!localStorage.getItem('mlea_'+s))localStorage.setItem('mlea_'+s,'[]')})},getAll(k){return JSON.parse(localStorage.getItem('mlea_'+k)||'[]')},set(k,d){localStorage.setItem('mlea_'+k,JSON.stringify(d))},add(k,item){const items=this.getAll(k);item.id=items.reduce((max,i)=>Math.max(max,i.id||0),0)+1;item.createdAt=new Date().toISOString();items.push(item);this.set(k,items);return item.id;},update(k,item){const items=this.getAll(k);const idx=items.findIndex(i=>i.id===item.id);if(idx!==-1){items[idx]=item;this.set(k,items);}},delete(k,id){this.set(k,this.getAll(k).filter(i=>i.id!==id))},getById(k,id){return this.getAll(k).find(i=>i.id===id)}};
+LocalDB.init();
+function toast(msg,color='gold'){alert(msg);} // simple for demo
+let cart = [];
+let products = [];
+
+function loadProducts() { products = LocalDB.getAll('products').filter(p=>p.active); renderProductList(); }
+function searchProducts() { renderProductList(); }
+function renderProductList() {
+  const search = document.getElementById('search').value.toLowerCase();
+  let filtered = products.filter(p => p.name.toLowerCase().includes(search) || (p.barcode && p.barcode.includes(search)));
+  const container = document.getElementById('productList');
+  container.innerHTML = filtered.map(p => `
+    <div class="card" style="cursor:pointer" onclick="addToCart(${p.id})">
+      <strong>${escapeHtml(p.name)}</strong><br>
+      Price: ${formatCurrency(p.price)}<br>
+      Stock: ${p.stock}
+    </div>
+  `).join('');
+}
+function formatCurrency(amt){return '₱' + amt.toFixed(2);}
+function addToCart(productId){
+  const p = products.find(p=>p.id===productId);
+  if(!p || p.stock<=0) return toast('Out of stock','rose');
+  const existing = cart.find(i=>i.id===p.id);
+  if(existing) existing.qty++;
+  else cart.push({id:p.id, name:p.name, price:p.price, qty:1, vatExempt:p.vatExempt, zeroRated:p.zeroRated});
+  renderCart();
+}
+function removeFromCart(idx){ cart.splice(idx,1); renderCart(); }
+function renderCart(){
+  const container = document.getElementById('cartItems');
+  let subtotal = cart.reduce((sum,i)=>sum + i.price*i.qty,0);
+  const patientType = document.getElementById('patientType').value;
+  let discount = 0;
+  if(patientType === 'senior' || patientType === 'pwd') discount = subtotal * 0.2;
+  const total = subtotal - discount;
+  container.innerHTML = cart.map((item,i)=>`
+    <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #333">
+      <span>${escapeHtml(item.name)} x${item.qty}</span>
+      <span>${formatCurrency(item.price*item.qty)}</span>
+      <button onclick="removeFromCart(${i})">❌</button>
+    </div>
+  `).join('');
+  document.getElementById('cartTotal').innerHTML = `
+    <div>Subtotal: ${formatCurrency(subtotal)}</div>
+    <div>Discount (${patientType==='senior'?'SC':patientType==='pwd'?'PWD':'None'}): -${formatCurrency(discount)}</div>
+    <strong>Total: ${formatCurrency(total)}</strong>
+  `;
+}
+function finalizeSale(){
+  if(cart.length===0){ toast('Cart empty','rose'); return; }
+  const rxNum = document.getElementById('rxNumber').value.trim();
+  if(!rxNum){ toast('Prescription number required','rose'); return; }
+  const doctor = document.getElementById('doctor').value.trim();
+  const expiry = document.getElementById('expiryDate').value;
+  const patientType = document.getElementById('patientType').value;
+  // Deduct stock
+  for(let item of cart){
+    const p = LocalDB.getById('products',item.id);
+    if(p){ p.stock -= item.qty; LocalDB.update('products',p); }
+  }
+  // Create sale record (same format as main POS)
+  const sale = {
+    date: new Date().toISOString().split('T')[0],
+    timestamp: new Date().toISOString(),
+    total: cart.reduce((s,i)=>s+i.price*i.qty,0) * (patientType==='regular'?1:0.8),
+    items: cart,
+    paymentMethod: 'pharmacy',
+    cashierName: 'Pharmacy Mode',
+    branchId: null,
+    orNumber: 'RX-'+Date.now(),
+    prescription: { rxNumber: rxNum, doctor, expiryDate: expiry, patientType },
+    voided: false
+  };
+  LocalDB.add('sales', sale);
+  toast('Sale recorded with prescription!','emerald');
+  cart = [];
+  renderCart();
+  document.getElementById('rxNumber').value = '';
+  document.getElementById('doctor').value = '';
+  document.getElementById('expiryDate').value = '';
+  document.getElementById('patientType').value = 'regular';
+  loadProducts();
+}
+function escapeHtml(str){if(!str)return '';return str.replace(/[&<>]/g,function(m){if(m==='&')return '&amp;';if(m==='<')return '&lt;';if(m==='>')return '&gt;';return m;});}
+loadProducts();
+</script>
+</body>
+</html>

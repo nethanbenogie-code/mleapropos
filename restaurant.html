@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>MLEA - Restaurant Mode</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1220;color:#f0f0f5;font-family:'DM Sans',sans-serif;padding:16px}
+.wrap{max-width:1400px;margin:0 auto}
+h1,h2,h3{margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-bottom:20px}
+.table-card{background:linear-gradient(135deg,#1a2a3a,#0f1a24);border-radius:16px;padding:16px;text-align:center;cursor:pointer;transition:0.2s}
+.table-card.occupied{background:#2a1a1a;border:2px solid #f06577}
+.table-card.selected{background:#d4a853;color:#000}
+.order-panel{background:rgba(255,255,255,0.05);border-radius:20px;padding:20px;margin-top:20px}
+.cart-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #333}
+.modifier-group{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.modifier-btn{background:#2a2a2a;border:none;padding:5px 12px;border-radius:20px;cursor:pointer}
+.modifier-btn.selected{background:#d4a853;color:#000}
+.btn{background:#d4a853;color:#000;padding:12px 24px;border:none;border-radius:30px;cursor:pointer;font-weight:bold;margin-right:8px}
+.btn-danger{background:#f06577}
+.btn-secondary{background:#2a2a2a;color:#fff}
+.status-bar{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.status-badge{padding:5px 12px;border-radius:20px;background:#2a2a2a}
+.kitchen-view{background:#1a1a1a;border-radius:20px;padding:16px;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🍽️ Restaurant Mode</h1>
+  <div class="status-bar">
+    <div class="status-badge" id="selectedTable">No table selected</div>
+    <div class="status-badge" id="orderType">Type: Dine-in</div>
+    <button class="btn-secondary" onclick="showKitchenDisplay()">👨‍🍳 Kitchen Display</button>
+  </div>
+  
+  <!-- Tables grid -->
+  <div class="grid" id="tablesGrid"></div>
+  
+  <!-- Order panel (visible only when a table is selected) -->
+  <div id="orderPanel" class="order-panel" style="display:none">
+    <div style="display:flex; justify-content:space-between; align-items:center">
+      <h2>Order for Table <span id="tableNumber"></span></h2>
+      <div>
+        <button class="btn-secondary" onclick="changeOrderType()">Takeaway / Dine-in</button>
+        <button class="btn-danger" onclick="clearTable()">Clear Order</button>
+      </div>
+    </div>
+    
+    <!-- Course tabs -->
+    <div style="display:flex; gap:10px; margin:16px 0">
+      <button class="btn-secondary" onclick="setCourse('appetizer')">🍢 Appetizer</button>
+      <button class="btn-secondary" onclick="setCourse('main')">🍛 Main Course</button>
+      <button class="btn-secondary" onclick="setCourse('dessert')">🍰 Dessert</button>
+      <button class="btn-secondary" onclick="setCourse('drinks')">🥤 Drinks</button>
+    </div>
+    
+    <!-- Product search -->
+    <input type="text" id="productSearch" placeholder="Search menu items..." oninput="searchProducts()" style="width:100%; padding:10px; margin-bottom:12px">
+    <div class="grid" id="productList"></div>
+    
+    <!-- Current order items -->
+    <h3>Current Order (Course: <span id="currentCourseLabel">Appetizer</span>)</h3>
+    <div id="orderItems"></div>
+    <div id="orderTotal"></div>
+    <div style="margin-top:16px">
+      <button class="btn" onclick="sendToKitchen()">🍳 Send to Kitchen</button>
+      <button class="btn btn-secondary" onclick="holdOrder()">⏸ Hold Order</button>
+      <button class="btn" onclick="checkout()">💵 Checkout</button>
+    </div>
+  </div>
+  
+  <!-- Kitchen display modal (simple) -->
+  <div id="kitchenModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; overflow:auto; padding:20px">
+    <div style="background:#1a1a1a; border-radius:20px; padding:20px; max-width:800px; margin:auto">
+      <div style="display:flex; justify-content:space-between"><h2>👨‍🍳 Kitchen Orders</h2><button onclick="document.getElementById('kitchenModal').style.display='none'">✖</button></div>
+      <div id="kitchenOrdersList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== SHARED STORAGE (same as main POS) ==========
+const STORES = ['products','sales','users','settings','branches','activityLogs','suppliers','purchaseOrders','voidedSales','heldSales','returns','customers','restaurantOrders'];
+const LocalDB={init(){STORES.forEach(s=>{if(!localStorage.getItem('mlea_'+s))localStorage.setItem('mlea_'+s,'[]')})},getAll(k){return JSON.parse(localStorage.getItem('mlea_'+k)||'[]')},set(k,d){localStorage.setItem('mlea_'+k,JSON.stringify(d))},add(k,item){const items=this.getAll(k);item.id=items.reduce((max,i)=>Math.max(max,i.id||0),0)+1;item.createdAt=new Date().toISOString();items.push(item);this.set(k,items);return item.id;},update(k,item){const items=this.getAll(k);const idx=items.findIndex(i=>i.id===item.id);if(idx!==-1){items[idx]=item;this.set(k,items);}},delete(k,id){this.set(k,this.getAll(k).filter(i=>i.id!==id))},getById(k,id){return this.getAll(k).find(i=>i.id===id)}};
+LocalDB.init();
+let products = [];
+let currentTableId = null;
+let currentOrder = { tableId: null, items: [], orderType: 'dinein', course: 'appetizer', status: 'draft' };
+let allOrders = []; // for kitchen display
+let orderType = 'dinein';
+
+function loadProducts() { products = LocalDB.getAll('products').filter(p=>p.active); }
+function renderTables() {
+  const tables = [1,2,3,4,5,6,7,8,9,10,11,12]; // 12 tables
+  const occupiedTables = LocalDB.getAll('restaurantOrders').filter(o => o.status !== 'paid' && o.status !== 'cancelled').map(o => o.tableId);
+  const container = document.getElementById('tablesGrid');
+  container.innerHTML = tables.map(num => `
+    <div class="table-card ${occupiedTables.includes(num) ? 'occupied' : ''} ${currentTableId === num ? 'selected' : ''}" onclick="selectTable(${num})">
+      <div style="font-size:1.5rem">🍽️</div>
+      <div>Table ${num}</div>
+      ${occupiedTables.includes(num) ? '<small>Occupied</small>' : '<small>Free</small>'}
+    </div>
+  `).join('');
+}
+function selectTable(id) {
+  currentTableId = id;
+  // Load existing order for this table from localStorage
+  const existing = LocalDB.getAll('restaurantOrders').find(o => o.tableId === id && o.status !== 'paid' && o.status !== 'cancelled');
+  if (existing) {
+    currentOrder = existing;
+    orderType = existing.orderType;
+  } else {
+    currentOrder = { tableId: id, items: [], orderType: 'dinein', course: 'appetizer', status: 'draft', createdAt: new Date().toISOString() };
+    orderType = 'dinein';
+  }
+  document.getElementById('selectedTable').innerText = `Table ${id}${existing ? ' (Occupied)' : ''}`;
+  document.getElementById('orderPanel').style.display = 'block';
+  document.getElementById('tableNumber').innerText = id;
+  document.getElementById('orderType').innerHTML = `Type: ${orderType === 'dinein' ? '🍽️ Dine-in' : '🥡 Takeaway'}`;
+  renderOrderItems();
+  renderProductList();
+  renderTables(); // refresh highlights
+}
+function changeOrderType() {
+  orderType = orderType === 'dinein' ? 'takeaway' : 'dinein';
+  currentOrder.orderType = orderType;
+  document.getElementById('orderType').innerHTML = `Type: ${orderType === 'dinein' ? '🍽️ Dine-in' : '🥡 Takeaway'}`;
+}
+function setCourse(course) {
+  currentOrder.course = course;
+  document.getElementById('currentCourseLabel').innerText = course.charAt(0).toUpperCase() + course.slice(1);
+  renderProductList(); // refresh product list (could filter by category if you add categories)
+}
+function searchProducts() { renderProductList(); }
+function renderProductList() {
+  const search = document.getElementById('productSearch').value.toLowerCase();
+  let filtered = products.filter(p => p.name.toLowerCase().includes(search));
+  const container = document.getElementById('productList');
+  container.innerHTML = filtered.map(p => `
+    <div class="table-card" style="cursor:pointer" onclick="addToOrder(${p.id})">
+      <strong>${escapeHtml(p.name)}</strong><br>
+      ${formatCurrency(p.price)}<br>
+      <small>${p.stock>0?'In stock':'Out'}</small>
+    </div>
+  `).join('');
+}
+function addToOrder(productId) {
+  const product = products.find(p=>p.id===productId);
+  if(!product || product.stock<=0) return alert('Out of stock');
+  // check if item already in current order with same modifiers? For simplicity, add new line each time (like courses)
+  currentOrder.items.push({
+    productId: product.id,
+    name: product.name,
+    price: product.price,
+    quantity: 1,
+    course: currentOrder.course,
+    modifiers: [] // later: add modifiers popup
+  });
+  renderOrderItems();
+}
+function removeOrderItem(idx) { currentOrder.items.splice(idx,1); renderOrderItems(); }
+function renderOrderItems() {
+  const container = document.getElementById('orderItems');
+  let subtotal = 0;
+  const grouped = currentOrder.items.reduce((acc,item,idx) => {
+    acc.push({...item, idx});
+    return acc;
+  }, []);
+  container.innerHTML = grouped.map((item,i) => `
+    <div class="cart-item">
+      <div><strong>${escapeHtml(item.name)}</strong><br><small>${item.course}</small></div>
+      <div>${formatCurrency(item.price)} x ${item.quantity}</div>
+      <div>${formatCurrency(item.price*item.quantity)}</div>
+      <div><button onclick="removeOrderItem(${item.idx})">❌</button></div>
+    </div>
+  `).join('');
+  subtotal = currentOrder.items.reduce((s,i)=>s + i.price*i.quantity,0);
+  const total = subtotal; // no discount for simplicity, but could add SC/PWD
+  document.getElementById('orderTotal').innerHTML = `
+    <div>Subtotal: ${formatCurrency(subtotal)}</div>
+    <div><strong>Total: ${formatCurrency(total)}</strong></div>
+  `;
+}
+function sendToKitchen() {
+  if(currentOrder.items.length===0) return alert('No items to send');
+  // save order to localStorage as "pending"
+  currentOrder.status = 'pending';
+  currentOrder.updatedAt = new Date().toISOString();
+  const existingIndex = LocalDB.getAll('restaurantOrders').findIndex(o => o.tableId === currentTableId && o.status !== 'paid');
+  if(existingIndex !== -1) {
+    LocalDB.update('restaurantOrders', currentOrder);
+  } else {
+    LocalDB.add('restaurantOrders', currentOrder);
+  }
+  alert('Order sent to kitchen!');
+  renderTables();
+  showKitchenDisplay(); // optional: auto open kitchen view
+}
+function holdOrder() {
+  if(currentOrder.items.length===0) return alert('No items to hold');
+  currentOrder.status = 'held';
+  const existingIndex = LocalDB.getAll('restaurantOrders').findIndex(o => o.tableId === currentTableId && o.status !== 'paid');
+  if(existingIndex !== -1) {
+    LocalDB.update('restaurantOrders', currentOrder);
+  } else {
+    LocalDB.add('restaurantOrders', currentOrder);
+  }
+  alert('Order held. You can resume later.');
+  clearTable(true); // clear UI but keep in storage
+}
+function clearTable(keepOrder=false) {
+  if(!keepOrder) {
+    // delete order from storage
+    const existing = LocalDB.getAll('restaurantOrders').find(o => o.tableId === currentTableId && o.status !== 'paid');
+    if(existing) LocalDB.delete('restaurantOrders', existing.id);
+  }
+  currentOrder = { tableId: null, items: [], orderType: 'dinein', course: 'appetizer', status: 'draft' };
+  currentTableId = null;
+  document.getElementById('orderPanel').style.display = 'none';
+  document.getElementById('selectedTable').innerText = 'No table selected';
+  renderTables();
+}
+function checkout() {
+  if(currentOrder.items.length===0) return alert('No items to checkout');
+  // Create a sale record (same as main POS)
+  const subtotal = currentOrder.items.reduce((s,i)=>s + i.price*i.quantity,0);
+  const sale = {
+    date: new Date().toISOString().split('T')[0],
+    timestamp: new Date().toISOString(),
+    total: subtotal,
+    items: currentOrder.items,
+    paymentMethod: 'restaurant',
+    cashierName: 'Restaurant Mode',
+    branchId: null,
+    orNumber: 'REST-'+Date.now(),
+    tableId: currentTableId,
+    orderType: currentOrder.orderType,
+    voided: false
+  };
+  LocalDB.add('sales', sale);
+  // Deduct stock
+  for(let item of currentOrder.items){
+    const p = LocalDB.getById('products', item.productId);
+    if(p) { p.stock -= item.quantity; LocalDB.update('products', p); }
+  }
+  // Mark order as paid
+  currentOrder.status = 'paid';
+  const existingIndex = LocalDB.getAll('restaurantOrders').findIndex(o => o.tableId === currentTableId && o.status !== 'paid');
+  if(existingIndex !== -1) LocalDB.update('restaurantOrders', currentOrder);
+  else LocalDB.add('restaurantOrders', currentOrder);
+  alert(`Checkout complete! Total: ${formatCurrency(subtotal)}`);
+  clearTable();
+}
+function showKitchenDisplay() {
+  const pendingOrders = LocalDB.getAll('restaurantOrders').filter(o => o.status === 'pending');
+  const container = document.getElementById('kitchenOrdersList');
+  container.innerHTML = pendingOrders.map(o => `
+    <div style="background:#2a2a2a; margin:12px 0; padding:12px; border-radius:12px">
+      <div><strong>Table ${o.tableId}</strong> - ${o.orderType === 'dinein' ? 'Dine-in' : 'Takeaway'}</div>
+      <div>Items: ${o.items.map(i=>`${i.name} x${i.quantity}`).join(', ')}</div>
+      <button onclick="markOrderReady(${o.id})">✅ Mark Ready</button>
+    </div>
+  `).join('');
+  if(pendingOrders.length===0) container.innerHTML = '<div>No pending orders</div>';
+  document.getElementById('kitchenModal').style.display = 'flex';
+}
+function markOrderReady(id) {
+  const order = LocalDB.getById('restaurantOrders', id);
+  if(order) {
+    order.status = 'ready';
+    LocalDB.update('restaurantOrders', order);
+    showKitchenDisplay(); // refresh
+    alert(`Order for Table ${order.tableId} is ready to serve.`);
+  }
+}
+function formatCurrency(amt){return '₱' + amt.toFixed(2);}
+function escapeHtml(str){if(!str)return '';return str.replace(/[&<>]/g,function(m){if(m==='&')return '&amp;';if(m==='<')return '&lt;';if(m==='>')return '&gt;';return m;});}
+loadProducts();
+renderTables();
+</script>
+</body>
+</html>
