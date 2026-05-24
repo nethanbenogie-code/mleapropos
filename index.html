@@ -1738,29 +1738,56 @@ async function toggleUser(id){
 // SALES (unchanged but uses getMyData already)
 // ============================================================
 function renderSales(el){
-  const sales=(currentView==='allSales'?DB.getAll('sales'):getMyData('sales')).filter(s=>!s.voided).slice(-60).reverse();
-  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-    <h4 style="margin:0">Sales History</h4>
-    <button class="btn bd bsm" onclick="sw('voidedSales')">🚫 Voided</button>
-  </div>
-  ${!sales.length?'<div class="empty-st"><div class="ei">💰</div><p>No sales yet</p></div>':`
-  <div class="tbl-wrap"><tr><thead><tr>
-    <th>OR/SI</th><th>Date</th><th>Total</th><th>Cash</th><th>Change</th><th>Method</th><th>Cashier</th><th></th>
-  </tr></thead><tbody>
-  ${sales.map(s=>`<tr>
-    <td style="font-family:var(--fm);font-size:.72em">${s.orNumber||'#'+s.id}</td>
-    <td>${s.date}</td>
-    <td style="font-family:var(--ff);color:var(--gold);font-weight:700">${fc(s.total)}</td>
-    <td style="font-family:var(--fm);font-size:.75em;color:var(--gold)">${(s.paymentMethod==='cash'||s.paymentMethod==='split')?fc(s.cashTendered||0):'—'}</td>
-    <td style="font-family:var(--fm);font-size:.75em;color:var(--emerald)">${(s.paymentMethod==='cash'||s.paymentMethod==='split')?fc(s.changeGiven||0):'—'}</td>
-    <td><span style="background:${s.paymentMethod==='cash'?'var(--emerald-soft)':s.paymentMethod==='card'?'var(--blue-soft)':'var(--purple-soft)'};color:${s.paymentMethod==='cash'?'var(--emerald)':s.paymentMethod==='card'?'var(--blue)':'var(--purple)'};padding:2px 8px;border-radius:10px;font-size:.7em;font-weight:600">${s.paymentMethod}</span></td>
-    <td>${escapeHtml(s.cashierName||'—')}</td>
-    <td style="white-space:nowrap">
-      <button class="btn bw bxs" onclick="reprintSale(${s.id})">🖨</button>
-      ${currentUser.role!=='cashier'?`<button class="btn bd bxs" onclick="voidSale(${s.id})">🚫</button>`:''}
-    </td>
-  </tr>`).join('')}
-  </tbody></table></div>`}`;
+  let sales = (currentView === 'allSales' ? DB.getAll('sales') : getMyData('sales')).filter(s => !s.voided).slice(-200).reverse();
+  
+  // Search filter
+  const searchOR = document.getElementById('salesSearch')?.value || '';
+  if (searchOR) {
+    sales = sales.filter(s => (s.orNumber || '#'+s.id).toLowerCase().includes(searchOR.toLowerCase()));
+  }
+  
+  const html = `
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:12px">
+      <h4 style="margin:0">Sales History</h4>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="salesSearch" placeholder="🔍 Search OR/SI..." style="width:160px; margin-bottom:0; padding:6px 10px;" oninput="renderSales(document.getElementById('mainContent'))">
+        <button class="btn bd bsm" onclick="sw('voidedSales')">🚫 Voided</button>
+      </div>
+    </div>
+    ${!sales.length ? '<div class="empty-st"><div class="ei">💰</div><p>No sales yet</p></div>' : `
+    <div class="tbl-wrap">
+      <table style="min-width:600px">
+        <thead>
+          <tr>
+            <th>OR/SI</th><th>Date</th><th>Items</th><th>Total</th><th>Cash</th><th>Change</th><th>Method</th><th>Cashier</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sales.map(s => {
+            const itemCount = (s.items || []).reduce((sum, i) => sum + i.quantity, 0);
+            const orDisplay = s.orNumber || ('#' + s.id);
+            const isCashOrSplit = (s.paymentMethod === 'cash' || s.paymentMethod === 'split');
+            return `
+            <tr>
+              <td style="font-family:var(--fm); font-size:.72em">${escapeHtml(orDisplay)}</td>
+              <td>${s.date}</td>
+              <td style="text-align:center">${itemCount}</td>
+              <td style="font-family:var(--ff); color:var(--gold); font-weight:700">${fc(s.total)}</td>
+              <td style="font-family:var(--fm); font-size:.75em; color:var(--gold)">${isCashOrSplit ? fc(s.cashTendered || 0) : '—'}</td>
+              <td style="font-family:var(--fm); font-size:.75em; color:var(--emerald)">${isCashOrSplit ? fc(s.changeGiven || 0) : '—'}</td>
+              <td><span style="background:${s.paymentMethod==='cash'?'var(--emerald-soft)':s.paymentMethod==='card'?'var(--blue-soft)':'var(--purple-soft)'}; color:${s.paymentMethod==='cash'?'var(--emerald)':s.paymentMethod==='card'?'var(--blue)':'var(--purple)'}; padding:2px 8px; border-radius:10px; font-size:.7em; font-weight:600">${s.paymentMethod}</span></td>
+              <td>${escapeHtml(s.cashierName || '—')}</td>
+              <td style="white-space:nowrap">
+                <button class="btn bw bxs" onclick="reprintSale(${s.id})">🖨</button>
+                ${currentUser.role !== 'cashier' ? `<button class="btn bd bxs" onclick="voidSale(${s.id})">🚫</button>` : ''}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`}
+  `;
+  el.innerHTML = html;
 }
 function renderVoided(el){
   const voided=getMyData('sales').filter(s=>s.voided);
