@@ -28,22 +28,9 @@
   --ff:'Syne',sans-serif;--fb:'DM Sans',sans-serif;--fm:'DM Mono',monospace;
   --r1:8px;--r2:14px;--r3:20px;--r4:28px;
 }
-body{font-family:var(--fb);background:var(--bg-void);color:var(--text);overflow-x:hidden;min-height:100vh}
+body{font-family:var(--fb);background:var(--bg-void);color:var(--text);overflow-x:hidden;min-height:100vh;font-size:var(--app-fs,16px)}
 .wrap{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg-deep);position:relative;overflow-x:hidden}
-/* WIDER DESKTOP LAYOUT */
-@media(min-width:1024px){
-  .wrap{max-width:1400px;width:95%}
-  .wrap .hdr, .wrap #mainContent{max-width:1400px;margin:0 auto}
-  .wrap .sidebar{left:-300px;width:300px}
-  .wrap .sidebar.on{left:0}
-  .wrap .prod-grid{grid-template-columns:repeat(4,1fr)}
-  .wrap .metrics{grid-template-columns:repeat(4,1fr)}
-  .wrap .print-grid{grid-template-columns:repeat(4,1fr)}
-}
-@media(min-width:768px) and (max-width:1023px){
-  .wrap{max-width:768px}
-  .wrap .prod-grid{grid-template-columns:repeat(3,1fr)}
-}
+@media(min-width:768px){.wrap{max-width:768px}}
 /* AMBIENT */
 .amb{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
 .amb::before{content:'';position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(212,168,83,0.06),transparent 70%);top:-100px;right:-100px;animation:drift 20s ease-in-out infinite}
@@ -296,7 +283,8 @@ tr:hover td{background:var(--bg-glass);color:var(--text)}
       <div class="lic-logo">🔐</div>
       <h2>MLEA POS</h2>
       <p>Enter your license key to unlock the system</p>
-      <input class="lic-input" type="text" id="licenseInput" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19" oninput="fmtLic(this)">
+      <input class="lic-input" type="text" id="licenseInput" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="24" oninput="fmtLic(this)">
+      <p style="font-size:.7em;color:var(--text3);margin:-4px 0 10px">Demo key: <span style="font-family:var(--fm);color:var(--gold);cursor:pointer" onclick="document.getElementById('licenseInput').value='MLEA-DEMO-UNLOCK-KEY1'">MLEA-DEMO-UNLOCK-KEY1</span></p>
       <button class="btn bp" id="activateBtn" onclick="doActivate()" style="width:100%">Activate License</button>
       <button class="btn bd" id="deactivateBtn" style="display:none;width:100%;margin-top:8px" onclick="doDeactivate()">Deactivate License</button>
       <button class="btn bb" id="validateBtn" style="display:none;width:100%;margin-top:8px" onclick="doValidate()">🔍 Check Status</button>
@@ -357,6 +345,50 @@ tr:hover td{background:var(--bg-glass);color:var(--text)}
 <div class="modal" id="modal"><div class="modal-box" id="modalBox"></div></div>
 <script>
 // ════════════════════════════════════════════
+// STORAGE SAFETY POLYFILL  (MUST RUN FIRST)
+// Some browsers block localStorage on file:// origins
+// or in private mode. Without this guard, the very
+// first localStorage call throws and the app appears
+// frozen (e.g. license button does nothing).
+// This installs an in-memory fallback so the app
+// always loads and remains usable.
+// ════════════════════════════════════════════
+(function(){
+  let ok=false;
+  try{
+    const k='__mlea_test__';
+    window.localStorage.setItem(k,'1');
+    window.localStorage.removeItem(k);
+    ok=true;
+  }catch(e){ ok=false; }
+  if(!ok){
+    const mem={};
+    const shim={
+      getItem(k){return Object.prototype.hasOwnProperty.call(mem,k)?mem[k]:null;},
+      setItem(k,v){mem[k]=String(v);},
+      removeItem(k){delete mem[k];},
+      clear(){for(const k in mem)delete mem[k];},
+      key(i){return Object.keys(mem)[i]??null;},
+      get length(){return Object.keys(mem).length;}
+    };
+    try{
+      Object.defineProperty(window,'localStorage',{value:shim,configurable:true,writable:false});
+    }catch(e){
+      window._memLS=shim;
+    }
+    window.addEventListener('DOMContentLoaded',function(){
+      try{
+        const d=document.createElement('div');
+        d.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#3a2a00;color:#f0c060;border:1px solid #d4a853;border-radius:10px;padding:10px 16px;font:13px system-ui;z-index:99999;max-width:90%;text-align:center';
+        d.textContent='\u26a0 Browser storage is blocked. The app will run, but data will NOT be saved when you close it. For full functionality, open via a web server (http://) rather than a file, and disable private browsing.';
+        document.body.appendChild(d);
+        setTimeout(()=>d.remove(),12000);
+      }catch(e){}
+    });
+  }
+})();
+
+// ════════════════════════════════════════════
 // DIALOG SYSTEM (replaces all alert/prompt/confirm)
 // ════════════════════════════════════════════
 function dlg(opts){
@@ -410,7 +442,7 @@ function toast(msg,color='gold',dur=3200){
 // ════════════════════════════════════════════
 // STORAGE — LOCAL
 // ════════════════════════════════════════════
-const STORES=['products','sales','users','settings','branches','activityLogs','suppliers','purchaseOrders','voidedSales','heldSales','returns','customers'];
+const STORES=['products','sales','users','settings','branches','activityLogs','suppliers','purchaseOrders','voidedSales','heldSales','returns','customers','expenses'];
 const LocalDB={
   init(){STORES.forEach(s=>{if(!localStorage.getItem('mlea_'+s))localStorage.setItem('mlea_'+s,'[]')})},
   getAll(k){try{return JSON.parse(localStorage.getItem('mlea_'+k)||'[]')}catch{return[]}},
@@ -552,6 +584,39 @@ function saveSetting(k,v){
 }
 
 // ════════════════════════════════════════════
+// FONT SIZE (accessibility)
+// Scales the whole UI by adjusting the body base
+// font-size; all em-based styles cascade from it.
+// ════════════════════════════════════════════
+const FS_MIN=12, FS_MAX=22, FS_DEFAULT=16;
+function getFontSize(){
+  const v=parseInt(getSetting('app_fontsize',String(FS_DEFAULT)))||FS_DEFAULT;
+  return Math.min(FS_MAX,Math.max(FS_MIN,v));
+}
+function applyFontSize(px){
+  document.documentElement.style.setProperty('--app-fs',px+'px');
+}
+function setFontSize(px){
+  px=Math.min(FS_MAX,Math.max(FS_MIN,parseInt(px)||FS_DEFAULT));
+  saveSetting('app_fontsize',String(px));
+  applyFontSize(px);
+  const prev=document.getElementById('fsPreview');
+  if(prev){prev.textContent=px+'px';const lbl=prev.nextElementSibling;if(lbl)lbl.textContent=fontSizeLabel(px);}
+  if(typeof toast==='function')toast('Font size: '+px+'px','emerald',1500);
+}
+function adjFontSize(delta){
+  setFontSize(getFontSize()+delta*2); // step by 2px
+}
+function fontSizeLabel(px){
+  if(px<=12)return'Extra Small';
+  if(px<=14)return'Small';
+  if(px<=16)return'Default';
+  if(px<=18)return'Large';
+  if(px<=20)return'Extra Large';
+  return'Maximum';
+}
+
+// ════════════════════════════════════════════
 // CURRENCIES
 // ════════════════════════════════════════════
 const CURR={
@@ -579,6 +644,7 @@ let cur='PHP',taxRate=0.12,lowStockThresh=10,printMode='ask';
 let cart=[],selUserId=null,pinEntry='',pinFails=0,pinLockUntil=0;
 let discAmt=0,discType='none',lastSale=null;
 let held=[],selCat='All',sesTimer=null;
+let _posSkipScanFocus=false; // POS: suppress scanner auto-focus during in-place search re-render
 let rcptFooter='Thank you for your purchase!';
 
 function getMyData(k){
@@ -671,17 +737,112 @@ function computeVAT(total,vatType,rate,items){
 // PIN HASHING — Web Crypto API (SHA-256 + salt)
 // Replaces plaintext PIN storage.
 // Format stored: "salt:hash" where both are hex strings.
+//
+// IMPORTANT: crypto.subtle only exists in "secure
+// contexts" (https:// or http://localhost). When the
+// app is served over a plain LAN IP (e.g.
+// http://192.168.x.x) crypto.subtle is undefined.
+// To keep the POS working on a local network we fall
+// back to a pure-JS SHA-256 (same algorithm + format,
+// so existing hashed PINs stay compatible).
 // ════════════════════════════════════════════
+
+// Pure-JS SHA-256 (used only when crypto.subtle is unavailable).
+function _sha256js(ascii) {
+  function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
+  const mathPow = Math.pow;
+  const maxWord = mathPow(2, 32);
+  let result = '';
+  const words = [];
+  const asciiBitLength = ascii.length * 8;
+  let hash = _sha256js.h = _sha256js.h || [];
+  const k = _sha256js.k = _sha256js.k || [];
+  let primeCounter = k.length;
+  const isComposite = {};
+  for (let candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (let i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+      k[primeCounter++] = (mathPow(candidate, 1/3) * maxWord) | 0;
+    }
+  }
+  hash = hash.slice(0, 8);
+  let h0 = hash.slice();
+  ascii += '\x80';
+  while (ascii.length % 64 - 56) ascii += '\x00';
+  for (let i = 0; i < ascii.length; i++) {
+    const j = ascii.charCodeAt(i);
+    if (j >> 8) return '';
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  }
+  words[words.length] = (asciiBitLength / maxWord) | 0;
+  words[words.length] = asciiBitLength;
+  for (let j = 0; j < words.length;) {
+    const w = words.slice(j, j += 16);
+    const oldHash = h0;
+    h0 = h0.slice(0, 8);
+    for (let i = 0; i < 64; i++) {
+      const w15 = w[i - 15], w2 = w[i - 2];
+      const a = h0[0], e = h0[4];
+      const temp1 = h0[7]
+        + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+        + ((e & h0[5]) ^ ((~e) & h0[6]))
+        + k[i]
+        + (w[i] = (i < 16) ? w[i] : (
+            w[i - 16]
+            + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+            + w[i - 7]
+            + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+          ) | 0);
+      const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+        + ((a & h0[1]) ^ (a & h0[2]) ^ (h0[1] & h0[2]));
+      h0 = [(temp1 + temp2) | 0].concat(h0);
+      h0[4] = (h0[4] + temp1) | 0;
+    }
+    for (let i = 0; i < 8; i++) h0[i] = (h0[i] + oldHash[i]) | 0;
+  }
+  for (let i = 0; i < 8; i++) {
+    for (let j = 3; j + 1; j--) {
+      const b = (h0[i] >> (j * 8)) & 255;
+      result += ((b < 16) ? 0 : '') + b.toString(16);
+    }
+  }
+  return result;
+}
+
+function _utf8(str) { return unescape(encodeURIComponent(str)); }
+
+function _hasSubtle() {
+  try { return !!(window.crypto && window.crypto.subtle && window.crypto.subtle.digest); }
+  catch (e) { return false; }
+}
+
+async function _sha256hex(str) {
+  if (_hasSubtle()) {
+    const data = new TextEncoder().encode(str);
+    const buf = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  return _sha256js(_utf8(str));
+}
+
+function _randomSalt(bytes) {
+  bytes = bytes || 16;
+  try {
+    if (window.crypto && window.crypto.getRandomValues) {
+      const arr = crypto.getRandomValues(new Uint8Array(bytes));
+      return Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+  } catch (e) {}
+  let s = '';
+  for (let i = 0; i < bytes; i++) s += Math.floor(Math.random()*256).toString(16).padStart(2,'0');
+  return s;
+}
+
 async function hashPIN(pin, salt) {
   // Generate a random salt if not provided (new PINs)
-  if (!salt) {
-    const arr = crypto.getRandomValues(new Uint8Array(16));
-    salt = Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
-  }
-  const encoder = new TextEncoder();
-  const data = encoder.encode(salt + pin);
-  const hashBuf = await crypto.subtle.digest('SHA-256', data);
-  const hashHex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  if (!salt) salt = _randomSalt(16);
+  const hashHex = await _sha256hex(salt + pin);
   return { hash: hashHex, salt, stored: salt + ':' + hashHex };
 }
 
@@ -764,11 +925,11 @@ function chkLock(){
 const LIC_SRV='https://script.google.com/macros/s/AKfycby1QlCg9jzpXmxtE1N-5w7b4CuGa0TT5gcfwYrx-0yetL4iI5s86ZX8NyLhDwo4tLJX/exec';
 const DEMO_KEY='MLEA-DEMO-UNLOCK-KEY1';
 function devId(){return btoa(navigator.userAgent.slice(-15)+screen.width+'x'+screen.height+new Date().getTimezoneOffset()).replace(/[^a-zA-Z0-9]/g,'').slice(0,16);}
-function fmtLic(inp){let v=inp.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase();if(v.length>16)v=v.slice(0,16);let p=[];for(let i=0;i<v.length;i+=4)p.push(v.slice(i,i+4));inp.value=p.join('-');}
-function isActiv(){return localStorage.getItem('mlea_activated')==='true';}
-function setActiv(key,info){localStorage.setItem('mlea_activated','true');localStorage.setItem('mlea_lic',key);if(info)localStorage.setItem('mlea_lic_info',JSON.stringify(info));showLicGate();}
-function clrActiv(){localStorage.removeItem('mlea_activated');localStorage.removeItem('mlea_lic');localStorage.removeItem('mlea_lic_info');currentUser=null;cart=[];showLicGate();}
-function getStoredLic(){return localStorage.getItem('mlea_lic')||'';}
+function fmtLic(inp){let v=inp.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase();if(v.length>20)v=v.slice(0,20);let p=[];for(let i=0;i<v.length;i+=4)p.push(v.slice(i,i+4));inp.value=p.join('-');}
+function isActiv(){try{return localStorage.getItem('mlea_activated')==='true';}catch(e){return false;}}
+function setActiv(key,info){try{localStorage.setItem('mlea_activated','true');localStorage.setItem('mlea_lic',key);if(info)localStorage.setItem('mlea_lic_info',JSON.stringify(info));}catch(e){}showLicGate();}
+function clrActiv(){try{localStorage.removeItem('mlea_activated');localStorage.removeItem('mlea_lic');localStorage.removeItem('mlea_lic_info');}catch(e){}currentUser=null;cart=[];showLicGate();}
+function getStoredLic(){try{return localStorage.getItem('mlea_lic')||'';}catch(e){return '';}}
 
 function showLicGate(){
   if(isActiv()){
@@ -798,6 +959,8 @@ function showLicGate(){
 async function doActivate(){
   const inp=document.getElementById('licenseInput'),s=document.getElementById('licStatus'),btn=document.getElementById('activateBtn');
   const key=inp.value.trim();if(!key){s.textContent='⚠ Enter license key';s.className='lic-status err';return;}
+  // Demo key activates instantly, no server needed
+  if(key===DEMO_KEY){setActiv(key);s.textContent='✓ Demo activated';s.className='lic-status ok';return;}
   btn.disabled=true;s.innerHTML='<span class="spinner"></span> Verifying…';s.className='lic-status';
   try{
     const r=await fetch(LIC_SRV+'?action=activate&licenseKey='+encodeURIComponent(key)+'&deviceId='+encodeURIComponent(devId()));
@@ -805,8 +968,7 @@ async function doActivate(){
     if(d.success)setActiv(key,{d:d.deviceCount,m:d.maxDevices});
     else{s.textContent='✗ '+d.message;s.className='lic-status err';}
   }catch(e){
-    if(key===DEMO_KEY){setActiv(key);s.textContent='✓ Demo activated (offline)';s.className='lic-status ok';}
-    else{s.textContent='✗ Cannot reach server';s.className='lic-status err';}
+    s.textContent='✗ Cannot reach license server. Check your internet connection, or use the demo key.';s.className='lic-status err';
   }
   btn.disabled=false;
 }
@@ -845,6 +1007,7 @@ function initApp(){
     if(s.key==='storageMode')storageMode=s.value||'local';
   });
   held=LocalDB.getAll('heldSales');
+  applyFontSize(getFontSize()); // restore saved font size
   updateSyncBar();
   // Migrate any plaintext PINs to hashed storage on startup
   migratePlaintextPINs().catch(()=>{});
@@ -992,6 +1155,10 @@ const viewMap={
   actLog:renderActLog,fbSetup:renderFBSetup,
 };
 function sw(view){
+  // Reset product list filters when leaving the products view
+  if(currentView!==view&&view!=='allProducts'&&view!=='inventory'){
+    _prodSearch='';_prodCat='all';_prodStock='all';_prodSort='name';_prodPage=1;
+  }
   currentView=view;closeSB();resetSesTimer();
   const el=document.getElementById('mainContent');
   el.style.opacity='0';el.style.transform='translateY(8px)';
@@ -1075,7 +1242,15 @@ function getCats(){return['All',...new Set(getMyData('products').filter(p=>p.act
 function getFilteredProds(search=''){
   let prods=getMyData('products').filter(p=>p.active);
   if(selCat!=='All')prods=prods.filter(p=>(p.category||'General')===selCat);
-  if(search)prods=prods.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())||(p.sku||'').toLowerCase().includes(search.toLowerCase())||(p.barcode||'').includes(search));
+  if(search){
+    const q=search.toLowerCase();
+    prods=prods.filter(p=>
+      (p.name||'').toLowerCase().includes(q)||
+      (p.sku||'').toLowerCase().includes(q)||
+      (p.barcode||'').toLowerCase().includes(q)||
+      (p.category||'').toLowerCase().includes(q)
+    );
+  }
   return prods;
 }
 function quickCash(total){
@@ -1163,7 +1338,11 @@ function renderPOS(el){
     </div>
     <div class="scan-wrap"><input type="text" id="scanInput" placeholder="Scan barcode or SKU…" onkeypress="if(event.key==='Enter'){addToCart(event.target.value.trim());event.target.value=''}"></div>
     <div class="scan-hint">⚡ Scanner Ready</div>
-    <div class="pos-search" style="margin-top:8px"><input type="text" id="posSearch" placeholder="Search products by name or SKU…" oninput="renderPOS(document.getElementById('mainContent'))"></div>
+    <div class="pos-search" style="margin-top:8px"><input type="text" id="posSearch" placeholder="🔍 Search name, SKU, barcode, category…" value="${search.replace(/"/g,'&quot;')}" oninput="_reRenderPOS(this)"></div>
+    ${search?`<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+      <span style="font-size:.74em;color:var(--text2)">${prods.length} match${prods.length===1?'':'es'}</span>
+      <button class="btn bd bxs" onclick="document.getElementById('posSearch').value='';renderPOS(document.getElementById('mainContent'))">✕ Clear</button>
+    </div>`:''}
     <div class="cat-row">${cats.map(c=>`<div class="cat-btn ${selCat===c?'on':''}" onclick="selCat='${c}';renderPOS(document.getElementById('mainContent'))">${c}</div>`).join('')}</div>
     <div class="prod-grid">${prods.slice(0,12).map(p=>`
       <div class="prod-card ${p.stock<=0?'oos':''}" onclick="${p.stock>0?`addToCart('${p.sku}')`:''}" >
@@ -1237,7 +1416,26 @@ function renderPOS(el){
           <button class="btn bpu" onclick="showSplitPay(${total})">⚡ Split</button>
         </div>`:''}
     </div>`;
-  setTimeout(()=>{const si=document.getElementById('scanInput');if(si)si.focus();},100);
+  // Only auto-focus the scanner on the INITIAL render, not while the
+  // user is typing in the product search box (that would steal focus).
+  if(!_posSkipScanFocus){
+    setTimeout(()=>{const si=document.getElementById('scanInput');if(si)si.focus();},100);
+  }
+  _posSkipScanFocus=false;
+}
+
+// Re-render POS in place while keeping focus + caret in the search box
+function _reRenderPOS(inputEl){
+  const el=document.getElementById('mainContent');
+  if(!el)return;
+  const hadFocus=inputEl&&document.activeElement===inputEl;
+  const caret=inputEl?inputEl.selectionStart:null;
+  _posSkipScanFocus=true;              // don't yank focus to the scanner
+  renderPOS(el);
+  if(hadFocus){
+    const ns=document.getElementById('posSearch');
+    if(ns){ns.focus();if(caret!=null)try{ns.setSelectionRange(caret,caret);}catch(e){}}
+  }
 }
 
 function addToCart(sku){
@@ -1428,6 +1626,11 @@ async function printRcpt(type){
   const logo=getLogoDataURL();
   const barcodeURL=await generateBarcodeDataURL(orNum);
   const custLine=sale.customerName?`<div class="rw"><span class="b">Customer</span><span>${sale.customerName}</span></div>`:'';
+  // Receipt hash + QR for tamper verification
+  const hashVal=sale.receiptHash||(await generateReceiptHash(sale));
+  const hashShort=hashVal?hashVal.slice(0,32)+'…':'';
+  const qrContent=hashVal?buildVerifyQRContent({...sale,receiptHash:hashVal}):'';
+  const qrURL=qrContent?await generateQRDataURL(qrContent):'';
   let html='';
   if(type==='thermal'){
     html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
@@ -1479,6 +1682,7 @@ async function printRcpt(type){
     <div class="c" style="font-size:9px;margin-top:4px">${footer}</div>
     ${sale.vatType!=='vat'?'<div class="c" style="font-size:8px;margin-top:3px">NOT valid for claiming input taxes.</div>':''}
     ${barcodeURL?`<img class="bc" src="${barcodeURL}" alt="${orNum}">`:`<div class="c" style="letter-spacing:3px;font-size:9px;margin:4px 0">||| ${orNum} |||</div>`}
+    ${qrURL?`<div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0"><img src="${qrURL}" style="width:52px;height:52px"><div style="flex:1;padding-left:6px;font-size:7px;color:#555;line-height:1.5">Verify receipt integrity:<br>Scan QR or check hash<br><span style="word-break:break-all">${hashShort}</span></div></div>`:''}
     <div class="c" style="font-size:8px;margin-top:4px;line-height:1.6">
       BIR Accred. No.: ${accNo}<br>
       Issued: ${accDate} | Expiry: ${accExp}<br>
@@ -1575,6 +1779,15 @@ async function printRcpt(type){
       PTU (Permit to Use) No.: ${ptu}<br>
       Series: ${bir.prefix}-${bir.serFrom} to ${bir.prefix}-${bir.serTo}
     </div>
+    ${hashVal?`<div style="margin-top:12px;padding:10px 14px;background:#f9f9f9;border:1px solid #e0e0e0;border-radius:6px;display:flex;align-items:center;gap:14px">
+      ${qrURL?`<img src="${qrURL}" style="width:72px;height:72px;flex-shrink:0">`:''}
+      <div style="font-size:9px;color:#666;line-height:1.8;word-break:break-all">
+        <strong style="color:#333;font-size:10px">Receipt Integrity Verification</strong><br>
+        This receipt contains a SHA-256 cryptographic hash.<br>
+        Hash: <span style="font-family:monospace;font-size:8px">${hashShort}</span><br>
+        Scan QR to verify this receipt has not been altered.
+      </div>
+    </div>`:''}
     <div class="ftr">
       <div>${footer}</div>
       <div style="text-align:right">MLEA POS v6.0 (BIR-Ready)<br>${orNum} · ${dateStr}</div>
@@ -1761,46 +1974,148 @@ async function deletePO(id){
 // ════════════════════════════════════════════
 // PRODUCTS
 // ════════════════════════════════════════════
+// Product list view state (persists across re-renders within a session)
+let _prodSearch='', _prodCat='all', _prodStock='all', _prodSort='name', _prodPage=1;
+const PROD_PAGE_SIZE=25;
+
 function renderProducts(el){
-  const prods=currentView==='allProducts'?DB.getAll('products'):getMyData('products');
-  const suppliers=DB.getAll('suppliers');const lowItems=getLowStock();
-  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><h4 style="margin:0">Products</h4><button class="btn bp bsm" onclick="showProductModal()">+ Add</button></div>`;
-  if(lowItems.length)html+=`<div style="background:rgba(240,101,119,.08);border:1px solid rgba(240,101,119,.25);border-radius:var(--r2);padding:12px 16px;margin-bottom:12px">
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-      <span style="font-family:var(--ff);font-weight:700;font-size:.85em;color:var(--rose)">⚠️ ${lowItems.length} Low Stock</span>
-      <span style="font-size:.68em;color:var(--text2)">Threshold: ≤${lowStockThresh}</span>
-    </div>
-    ${lowItems.map(p=>`<div style="display:flex;justify-content:space-between;padding:6px 10px;background:rgba(0,0,0,.2);border-radius:6px;margin-bottom:4px">
-      <span style="font-size:.78em">${p.name}</span>
-      <span style="font-family:var(--fm);font-size:.75em;color:${p.stock===0?'var(--rose)':'#fbb923'};font-weight:700">${p.stock===0?'OUT':p.stock+' left'}</span>
-    </div>`).join('')}
+  const allProds=currentView==='allProducts'?DB.getAll('products'):getMyData('products');
+  const lowItems=getLowStock();
+  // Build category list
+  const cats=[...new Set(allProds.map(p=>p.category||'General'))].sort();
+
+  // Apply filters
+  let prods=allProds.slice();
+  if(_prodSearch){
+    const q=_prodSearch.toLowerCase();
+    prods=prods.filter(p=>
+      (p.name||'').toLowerCase().includes(q)||
+      (p.sku||'').toLowerCase().includes(q)||
+      (p.barcode||'').toLowerCase().includes(q)||
+      (p.category||'').toLowerCase().includes(q)
+    );
+  }
+  if(_prodCat!=='all')prods=prods.filter(p=>(p.category||'General')===_prodCat);
+  if(_prodStock==='low')prods=prods.filter(p=>p.stock<=lowStockThresh&&p.stock>0);
+  else if(_prodStock==='out')prods=prods.filter(p=>p.stock<=0);
+  else if(_prodStock==='in')prods=prods.filter(p=>p.stock>lowStockThresh);
+  // Sort
+  prods.sort((a,b)=>{
+    if(_prodSort==='name')return (a.name||'').localeCompare(b.name||'');
+    if(_prodSort==='name_desc')return (b.name||'').localeCompare(a.name||'');
+    if(_prodSort==='price')return (b.price||0)-(a.price||0);
+    if(_prodSort==='price_asc')return (a.price||0)-(b.price||0);
+    if(_prodSort==='stock')return (a.stock||0)-(b.stock||0);
+    if(_prodSort==='stock_desc')return (b.stock||0)-(a.stock||0);
+    return 0;
+  });
+
+  const totalFiltered=prods.length;
+  const totalPages=Math.max(1,Math.ceil(totalFiltered/PROD_PAGE_SIZE));
+  if(_prodPage>totalPages)_prodPage=totalPages;
+  if(_prodPage<1)_prodPage=1;
+  const pageStart=(_prodPage-1)*PROD_PAGE_SIZE;
+  const pageProds=prods.slice(pageStart,pageStart+PROD_PAGE_SIZE);
+
+  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <h4 style="margin:0">Products <span style="font-size:.6em;color:var(--text3);font-weight:400">(${allProds.length})</span></h4>
+    <button class="btn bp bsm" onclick="showProductModal()">+ Add</button>
   </div>`;
-  html+=`<div class="tbl-wrap"><table><thead><tr>
-    <th>Name</th><th>Price</th><th>Stock</th><th>Unit</th><th>Cat.</th><th>Barcode</th><th>VAT</th>
-    ${currentUser.role==='admin'?'<th>Branch</th>':''}
-    <th></th>
-  </tr></thead><tbody>
-  ${prods.map(p=>{
-    const bn=p.branchId?(DB.getById('branches',p.branchId)||{name:'?'}).name:'🌐 Global';
-    const vl=p.vatExempt?'<span style="color:var(--blue);font-size:.72em">VE</span>':p.zeroRated?'<span style="color:var(--emerald);font-size:.72em">0%</span>':'<span style="color:var(--text2);font-size:.72em">VAT</span>';
-    return`<tr>
-      <td><strong style="color:var(--text)">${p.name}</strong></td>
-      <td style="color:var(--gold);font-family:var(--fm)">${fc(p.price)}</td>
-      <td class="${p.stock<=lowStockThresh?'stock-low':''}">${p.stock}</td>
-      <td style="font-size:.75em">${p.unit||'pcs'}</td>
-      <td>${p.category||'—'}</td>
-      <td style="font-family:var(--fm);font-size:.7em">${p.barcode||'—'}</td>
-      <td>${vl}</td>
-      ${currentUser.role==='admin'?`<td style="font-size:.72em">${bn}</td>`:''}
-      <td style="white-space:nowrap">
-        <button class="btn bs bxs" onclick="adjStock(${p.id})">+</button>
-        <button class="btn bw bxs" onclick="showProductModal(${p.id})">✎</button>
-        <button class="btn bd bxs" onclick="deleteProduct(${p.id})">🗑</button>
-      </td>
-    </tr>`;}).join('')}
-  </tbody></table></div>
-  ${!prods.length?'<div class="empty-st"><div class="ei">📦</div><p>No products yet</p></div>':''}`;
+
+  // ── Search + filter bar ──
+  html+=`<div class="card" style="padding:12px 14px;margin-bottom:12px">
+    <div class="pos-search" style="margin-bottom:8px">
+      <input type="text" id="prodSearch" placeholder="🔍 Search name, SKU, barcode, category…" value="${_prodSearch.replace(/"/g,'&quot;')}"
+        oninput="_prodSearch=this.value;_prodPage=1;_reRenderProducts(this)">
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <select id="prodCat" onchange="_prodCat=this.value;_prodPage=1;_reRenderProducts()" style="margin-bottom:0;flex:1;min-width:110px;font-size:.8em">
+        <option value="all" ${_prodCat==='all'?'selected':''}>All Categories</option>
+        ${cats.map(c=>`<option value="${c}" ${_prodCat===c?'selected':''}>${c}</option>`).join('')}
+      </select>
+      <select id="prodStock" onchange="_prodStock=this.value;_prodPage=1;_reRenderProducts()" style="margin-bottom:0;flex:1;min-width:100px;font-size:.8em">
+        <option value="all" ${_prodStock==='all'?'selected':''}>All Stock</option>
+        <option value="in" ${_prodStock==='in'?'selected':''}>In Stock</option>
+        <option value="low" ${_prodStock==='low'?'selected':''}>Low Stock</option>
+        <option value="out" ${_prodStock==='out'?'selected':''}>Out of Stock</option>
+      </select>
+      <select id="prodSort" onchange="_prodSort=this.value;_reRenderProducts()" style="margin-bottom:0;flex:1;min-width:110px;font-size:.8em">
+        <option value="name" ${_prodSort==='name'?'selected':''}>Name A→Z</option>
+        <option value="name_desc" ${_prodSort==='name_desc'?'selected':''}>Name Z→A</option>
+        <option value="price" ${_prodSort==='price'?'selected':''}>Price High→Low</option>
+        <option value="price_asc" ${_prodSort==='price_asc'?'selected':''}>Price Low→High</option>
+        <option value="stock" ${_prodSort==='stock'?'selected':''}>Stock Low→High</option>
+        <option value="stock_desc" ${_prodSort==='stock_desc'?'selected':''}>Stock High→Low</option>
+      </select>
+    </div>
+    ${(_prodSearch||_prodCat!=='all'||_prodStock!=='all')?`<div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:.74em;color:var(--text2)">${totalFiltered} match${totalFiltered===1?'':'es'}</span>
+      <button class="btn bd bxs" onclick="_prodSearch='';_prodCat='all';_prodStock='all';_prodPage=1;sw('${currentView}')">✕ Clear filters</button>
+    </div>`:''}
+  </div>`;
+
+  if(lowItems.length&&!_prodSearch&&_prodStock==='all')html+=`<div style="background:rgba(240,101,119,.08);border:1px solid rgba(240,101,119,.25);border-radius:var(--r2);padding:10px 14px;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:var(--ff);font-weight:700;font-size:.82em;color:var(--rose)">⚠️ ${lowItems.length} item(s) low/out of stock</span>
+      <button class="btn bd bxs" onclick="_prodStock='low';_prodPage=1;sw('${currentView}')">View</button>
+    </div>
+  </div>`;
+
+  // ── Table ──
+  if(pageProds.length){
+    html+=`<div class="tbl-wrap"><table><thead><tr>
+      <th>Name</th><th>Price</th><th>Stock</th><th>Unit</th><th>Cat.</th><th>VAT</th>
+      ${currentUser.role==='admin'?'<th>Branch</th>':''}
+      <th></th>
+    </tr></thead><tbody>
+    ${pageProds.map(p=>{
+      const bn=p.branchId?(DB.getById('branches',p.branchId)||{name:'?'}).name:'🌐';
+      const vl=p.vatExempt?'<span style="color:var(--blue);font-size:.72em">VE</span>':p.zeroRated?'<span style="color:var(--emerald);font-size:.72em">0%</span>':'<span style="color:var(--text2);font-size:.72em">VAT</span>';
+      return`<tr>
+        <td><strong style="color:var(--text)">${p.name}</strong>${p.sku?`<br><span style="font-size:.65em;color:var(--text3);font-family:var(--fm)">${p.sku}</span>`:''}</td>
+        <td style="color:var(--gold);font-family:var(--fm)">${fc(p.price)}</td>
+        <td class="${p.stock<=lowStockThresh?'stock-low':''}">${p.stock}</td>
+        <td style="font-size:.75em">${p.unit||'pcs'}</td>
+        <td style="font-size:.78em">${p.category||'—'}</td>
+        <td>${vl}</td>
+        ${currentUser.role==='admin'?`<td style="font-size:.72em">${bn}</td>`:''}
+        <td style="white-space:nowrap">
+          <button class="btn bs bxs" onclick="adjStock(${p.id})">+</button>
+          <button class="btn bw bxs" onclick="showProductModal(${p.id})">✎</button>
+          <button class="btn bd bxs" onclick="deleteProduct(${p.id})">🗑</button>
+        </td>
+      </tr>`;}).join('')}
+    </tbody></table></div>`;
+
+    // ── Pagination ──
+    if(totalPages>1){
+      html+=`<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn bw bsm" ${_prodPage<=1?'disabled':''} onclick="_prodPage=1;sw('${currentView}')">« First</button>
+        <button class="btn bw bsm" ${_prodPage<=1?'disabled':''} onclick="_prodPage--;sw('${currentView}')">‹ Prev</button>
+        <span style="font-size:.82em;color:var(--text2);font-family:var(--fm);padding:0 6px">Page ${_prodPage} / ${totalPages}</span>
+        <button class="btn bw bsm" ${_prodPage>=totalPages?'disabled':''} onclick="_prodPage++;sw('${currentView}')">Next ›</button>
+        <button class="btn bw bsm" ${_prodPage>=totalPages?'disabled':''} onclick="_prodPage=${totalPages};sw('${currentView}')">Last »</button>
+      </div>
+      <p style="text-align:center;font-size:.72em;color:var(--text3);margin-top:6px">Showing ${pageStart+1}–${Math.min(pageStart+PROD_PAGE_SIZE,totalFiltered)} of ${totalFiltered}</p>`;
+    }
+  }else{
+    html+=`<div class="empty-st"><div class="ei">🔍</div><p>${allProds.length?'No products match your filters':'No products yet'}</p>${allProds.length?'<button class="btn bd bsm" style="margin-top:8px" onclick="_prodSearch=\'\';_prodCat=\'all\';_prodStock=\'all\';sw(\''+currentView+'\')">Clear filters</button>':''}</div>`;
+  }
+
   el.innerHTML=html;
+}
+
+// Re-render product list in place without losing search-input focus
+function _reRenderProducts(inputEl){
+  const el=document.getElementById('mainContent');
+  if(!el)return;
+  const hadFocus=inputEl&&document.activeElement===inputEl;
+  const caret=inputEl?inputEl.selectionStart:null;
+  renderProducts(el);
+  if(hadFocus){
+    const ns=document.getElementById('prodSearch');
+    if(ns){ns.focus();if(caret!=null)try{ns.setSelectionRange(caret,caret);}catch(e){}}
+  }
 }
 function showProductModal(id){
   const p=id?DB.getById('products',id):null;
@@ -2373,6 +2688,11 @@ function renderReports(el){
   const cardSales=ms.filter(s=>s.paymentMethod==='card');
   const splitSales=ms.filter(s=>s.paymentMethod==='split');
   const vatDue=vat-refunds*taxRate;
+  // Expenses for the month
+  const monthExp=getMyData('expenses').filter(e=>(e.date||'').startsWith(m));
+  const expTotal=monthExp.reduce((a,e)=>a+(e.amount||0),0);
+  const grossProfit=rev-cost;
+  const netProfit=grossProfit-expTotal;
   el.innerHTML=`<h4>Reports — ${new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'})}</h4>
     <div class="card" style="border-left:3px solid var(--gold)">
       <h5>Revenue</h5>
@@ -2382,8 +2702,16 @@ function renderReports(el){
       </div>
       <div class="metrics" style="margin-top:8px">
         <div class="met"><div class="met-v">${fc(vs)}</div><div class="met-l">VATable Sales</div></div>
-        <div class="met"><div class="met-v" style="color:var(--emerald)">${fc(rev-cost)}</div><div class="met-l">Gross Profit</div></div>
+        <div class="met"><div class="met-v" style="color:var(--emerald)">${fc(grossProfit)}</div><div class="met-l">Gross Profit</div></div>
       </div>
+    </div>
+    <div class="card" style="border-left:3px solid var(--rose)">
+      <h5>💸 Expenses & Net Profit</h5>
+      <div class="metrics">
+        <div class="met"><div class="met-v" style="color:var(--rose)">${fc(expTotal)}</div><div class="met-l">Expenses (${monthExp.length})</div></div>
+        <div class="met"><div class="met-v" style="color:${netProfit>=0?'var(--emerald)':'var(--rose)'}">${fc(netProfit)}</div><div class="met-l">Net Profit</div></div>
+      </div>
+      <p style="font-size:.72em;color:var(--text3);margin-top:6px">Net Profit = Gross Profit − Expenses. <span onclick="sw('expenses')" style="color:var(--blue);cursor:pointer;text-decoration:underline">Manage expenses →</span></p>
     </div>
     <div class="card">
       <h5>🏛️ BIR Tax Summary</h5>
@@ -2410,6 +2738,7 @@ function renderReports(el){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
       <button class="btn bp" onclick="exportCSV('sales')">📥 Sales CSV</button>
       <button class="btn bs" onclick="exportCSV('inventory')">📥 Inventory CSV</button>
+      <button class="btn bw" onclick="exportExpensesCSV()">💸 Expenses CSV</button>
       <button class="btn bw" onclick="exportBIRReport()">🏛️ BIR Report CSV</button>
       <button class="btn bd" onclick="downloadBackup()">💾 Full Backup</button>
     </div>`;
@@ -2601,6 +2930,24 @@ function renderSettings(el){
       </div>
     </div>
     <div class="card">
+      <h5>🔠 Font Size</h5>
+      <p style="font-size:.75em;color:var(--text2);margin-bottom:10px">Adjust the text size across the whole app for easier reading.</p>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn bw bsm" onclick="adjFontSize(-1)" style="font-size:1.1em;min-width:44px">A−</button>
+        <div style="flex:1;text-align:center">
+          <div id="fsPreview" style="font-family:var(--ff);font-weight:700;color:var(--gold)">${getFontSize()}px</div>
+          <div style="font-size:.68em;color:var(--text3)">${fontSizeLabel(getFontSize())}</div>
+        </div>
+        <button class="btn bw bsm" onclick="adjFontSize(1)" style="font-size:1.1em;min-width:44px">A+</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <button class="btn bd bxs" style="flex:1" onclick="setFontSize(14)">Small</button>
+        <button class="btn bd bxs" style="flex:1" onclick="setFontSize(16)">Default</button>
+        <button class="btn bd bxs" style="flex:1" onclick="setFontSize(18)">Large</button>
+        <button class="btn bd bxs" style="flex:1" onclick="setFontSize(20)">XL</button>
+      </div>
+    </div>
+    <div class="card">
       <h5>⏱ Session Timeout (minutes)</h5>
       <div style="display:flex;gap:10px;align-items:center">
         <input type="number" id="sesInp" value="${getSetting('ses_timeout','30')}" min="5" max="480" style="margin-bottom:0">
@@ -2699,6 +3046,9 @@ let _devBuf = '';
 let _devLastKey = 0;
 
 function _devSeqDetect(key) {
+  // Guard: some key events (mobile keyboards, IME, autofill) fire with
+  // key === undefined. Bail out safely instead of throwing on .length.
+  if (typeof key !== 'string') return;
   const now = Date.now();
   // Reset buffer if >2s gap between keystrokes
   if (now - _devLastKey > 2000) _devBuf = '';
@@ -2713,6 +3063,53 @@ function _devSeqDetect(key) {
   }
 }
 
+// ── Mobile activation: tap the header title 7× within 3s ──
+// Phones have no physical keyboard, so the "devconsole" typing
+// trigger can't fire. This hidden tap-gesture is the mobile
+// equivalent. It still requires the developer password after,
+// so it grants no access on its own.
+const _DEV_TAP_COUNT = 7;
+const _DEV_TAP_WINDOW = 3000; // ms
+let _devTaps = 0;
+let _devTapTimer = null;
+function _devRegisterTap() {
+  _devTaps++;
+  clearTimeout(_devTapTimer);
+  _devTapTimer = setTimeout(() => { _devTaps = 0; }, _DEV_TAP_WINDOW);
+  if (_devTaps >= 4 && _devTaps < _DEV_TAP_COUNT && typeof toast === 'function') {
+    toast(`${_DEV_TAP_COUNT - _devTaps} more…`, 'gold', 800);
+  }
+  if (_devTaps >= _DEV_TAP_COUNT) {
+    _devTaps = 0;
+    clearTimeout(_devTapTimer);
+    _showDevAuth();
+  }
+}
+// Wire the gesture onto tap targets once the DOM is ready.
+// Targets: header title (in-app), login logo, and license logo —
+// so the console is reachable before login too (e.g. to reset a
+// locked-out PIN from the lock screen).
+(function _devWireTap() {
+  function attachOne(el) {
+    if (el && !el._devTapWired) {
+      el._devTapWired = true;
+      el.addEventListener('click', _devRegisterTap);
+    }
+  }
+  function attach() {
+    attachOne(document.getElementById('hdrTitle'));
+    attachOne(document.querySelector('.log-icon'));
+    attachOne(document.querySelector('.lic-logo'));
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attach);
+  } else {
+    attach();
+  }
+  setTimeout(attach, 1500);
+  setTimeout(attach, 4000);
+})();
+
 // Developer password hash (SHA-256 of "MLEAdev#2024!")
 // To change: run hashPIN('yourpassword','devstatic') and replace hash below
 const _DEV_PWD_HASH = 'devstatic:' + ''; // placeholder — computed on first load
@@ -2721,9 +3118,7 @@ let _devPwdReady = false;
 // Pre-compute the dev password hash on load so comparison is instant
 (async function() {
   try {
-    const enc = new TextEncoder();
-    const buf = await crypto.subtle.digest('SHA-256', enc.encode('devstatic' + 'MLEAdev#2024!'));
-    const hex = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const hex = await _sha256hex('devstatic' + 'MLEAdev#2024!');
     window._DEV_HASH = 'devstatic:' + hex;
     _devPwdReady = true;
   } catch(e) {
@@ -2770,9 +3165,7 @@ async function _devAuth() {
   // Hash the entered password and compare
   let match = false;
   if (_devPwdReady && window._DEV_HASH) {
-    const enc = new TextEncoder();
-    const buf = await crypto.subtle.digest('SHA-256', enc.encode('devstatic' + pwd));
-    const hex = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const hex = await _sha256hex('devstatic' + pwd);
     match = ('devstatic:' + hex) === window._DEV_HASH;
   } else {
     // Fallback if crypto failed to init
@@ -3382,6 +3775,104 @@ async function initFBFunctions(app) {
 }
 
 // Returns OR number from Cloud Function if available, falls back to local counter
+// ════════════════════════════════════════════
+// RECEIPT INTEGRITY — SHA-256 HASH + QR CODE
+// Each sale gets a hash of its key fields.
+// Printed as a QR code on receipts.
+// Anyone can verify the receipt is unaltered.
+// ════════════════════════════════════════════
+
+async function generateReceiptHash(sale) {
+  // Canonical string of key fields — order matters
+  const payload = [
+    sale.orNumber || sale.id,
+    sale.date,
+    sale.total.toFixed(2),
+    sale.cashierName || '',
+    sale.branchName || '',
+    sale.vatType || '',
+    (sale.items || []).map(i => `${i.name}:${i.quantity}:${i.price.toFixed(2)}`).join('|'),
+    sale.vatableSales ? sale.vatableSales.toFixed(2) : '0.00',
+    sale.tax ? sale.tax.toFixed(2) : '0.00',
+  ].join('||');
+  try {
+    return await _sha256hex(payload);
+  } catch(e) { return ''; }
+}
+
+// Store hash on sale record after creation
+async function attachReceiptHash(saleId) {
+  const sale = LocalDB.getById('sales', saleId);
+  if (!sale) return '';
+  const hash = await generateReceiptHash(sale);
+  if (!hash) return '';
+  sale.receiptHash = hash;
+  sale.receiptHashTs = new Date().toISOString();
+  LocalDB.update('sales', sale);
+  if (storageMode === 'firebase') {
+    const fs = FirebaseDB.getById('sales', saleId);
+    if (fs) { fs.receiptHash = hash; fs.receiptHashTs = sale.receiptHashTs; FirebaseDB.update('sales', fs); }
+  }
+  return hash;
+}
+
+// Verify a receipt hash (for display/audit)
+async function verifyReceiptHash(sale) {
+  if (!sale.receiptHash) return 'unverified';
+  const computed = await generateReceiptHash(sale);
+  return computed === sale.receiptHash ? 'valid' : 'tampered';
+}
+
+// Load QRCode.js on demand (lightweight, offline-capable via SW cache)
+async function loadQRLib() {
+  if (window.QRCode) return true;
+  return new Promise(resolve => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.head.appendChild(s);
+  });
+}
+
+// Generate QR data URL from text
+async function generateQRDataURL(text) {
+  const loaded = await loadQRLib();
+  if (!loaded) return '';
+  try {
+    const container = document.createElement('div');
+    container.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
+    document.body.appendChild(container);
+    new QRCode(container, {
+      text, width: 128, height: 128,
+      colorDark: '#000000', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+    await new Promise(r => setTimeout(r, 100)); // let QR render
+    const canvas = container.querySelector('canvas');
+    const img = container.querySelector('img');
+    let dataURL = '';
+    if (canvas) dataURL = canvas.toDataURL('image/png');
+    else if (img) dataURL = img.src;
+    container.remove();
+    return dataURL;
+  } catch(e) { return ''; }
+}
+
+// Build verification QR content — compact URL-style payload
+function buildVerifyQRContent(sale) {
+  const bir = getBIR();
+  return [
+    'MLEA-OR-VERIFY',
+    sale.orNumber || sale.id,
+    sale.date,
+    sale.total.toFixed(2),
+    bir.tin,
+    (sale.receiptHash || '').slice(0, 16), // first 16 hex chars for compact QR
+  ].join(':');
+}
+
+// Returns OR number from Cloud Function if available, falls back to local counter
 async function getORNumber() {
   if (_fbFunctions && storageMode === 'firebase' && isOnline) {
     try {
@@ -3610,11 +4101,449 @@ function export2550M() {
 }
 
 // ════════════════════════════════════════════
-// PHASE 3A: IndexedDB STORAGE ADAPTER
+// EXPENSES MODULE
+// Tracks operating expenses (snacks, supplies, etc.)
+// Categorized, date-filtered, with monthly totals.
+// ════════════════════════════════════════════
+const EXPENSE_CATEGORIES = ['Supplies','Food/Meals','Utilities','Rent','Salaries','Transport','Maintenance','Marketing','Permits/Fees','Other'];
+
+function renderExpenses(el){
+  const all=getMyData('expenses').slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  // Current-month filter context
+  const month=el._expMonth||new Date().toISOString().substring(0,7);
+  const monthExp=all.filter(e=>(e.date||'').startsWith(month));
+  const monthTotal=monthExp.reduce((s,e)=>s+(e.amount||0),0);
+  const allTotal=all.reduce((s,e)=>s+(e.amount||0),0);
+  // Category breakdown for the month
+  const byCat={};
+  monthExp.forEach(e=>{const c=e.category||'Other';byCat[c]=(byCat[c]||0)+(e.amount||0);});
+  const catRows=Object.entries(byCat).sort((a,b)=>b[1]-a[1])
+    .map(([c,v])=>`<div style="display:flex;justify-content:space-between;font-size:.8em;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:var(--text2)">${c}</span><span style="font-family:var(--fm)">${fc(v)}</span></div>`).join('');
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h4 style="margin:0">💸 Expenses</h4>
+      <button class="btn bp bsm" onclick="showExpenseModal()">+ Add Expense</button>
+    </div>
+    <div class="metrics" style="margin-bottom:12px">
+      <div class="met"><div class="met-v" style="color:var(--rose)">${fc(monthTotal)}</div><div class="met-l">This Month</div></div>
+      <div class="met"><div class="met-v">${monthExp.length}</div><div class="met-l">Entries</div></div>
+      <div class="met"><div class="met-v" style="color:var(--gold)">${fc(allTotal)}</div><div class="met-l">All-Time</div></div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <label style="font-size:.78em;color:var(--text2)">Month:</label>
+        <input type="month" id="expMonth" value="${month}" onchange="(function(){const el=document.getElementById('mainContent');el._expMonth=document.getElementById('expMonth').value;renderExpenses(el);})()" style="margin-bottom:0;width:auto;font-family:var(--fm);font-size:.85em">
+        <button class="btn bw bxs" style="margin-left:auto" onclick="exportExpensesCSV()">📥 CSV</button>
+      </div>
+      ${catRows?`<div style="margin-top:8px"><div style="font-size:.72em;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">By Category</div>${catRows}</div>`:''}
+    </div>
+    ${monthExp.length?monthExp.map(e=>`
+      <div class="card" style="padding:12px 14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="min-width:0;flex:1">
+            <div style="font-family:var(--ff);font-weight:600;font-size:.9em">${e.description||'(no description)'}</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:3px">
+              <span class="rbadge rb-cashier" style="font-size:.62em">${e.category||'Other'}</span>
+              <span style="font-size:.72em;color:var(--text3)">${e.date||''}</span>
+            </div>
+          </div>
+          <div style="text-align:right;display:flex;align-items:center;gap:8px">
+            <span style="font-family:var(--fm);font-weight:700;color:var(--rose)">${fc(e.amount||0)}</span>
+            <button class="btn bw bxs" onclick="showExpenseModal(${e.id})">✎</button>
+            <button class="btn bd bxs" onclick="deleteExpense(${e.id})">🗑</button>
+          </div>
+        </div>
+      </div>`).join(''):'<div class="empty-st"><div class="ei">💸</div><p>No expenses for this month</p></div>'}`;
+}
+
+function showExpenseModal(id){
+  const e=id?DB.getById('expenses',id):null;
+  const today=new Date().toISOString().split('T')[0];
+  openModal(`<h4>${e?'✎ Edit':'💸 Add'} Expense</h4>
+    <label class="inp-label">Description *</label>
+    <input type="text" id="expDesc" value="${e?(e.description||'').replace(/"/g,'&quot;'):''}" placeholder="e.g. Office supplies">
+    <label class="inp-label">Amount (₱) *</label>
+    <input type="number" id="expAmt" value="${e?e.amount:''}" placeholder="0.00" step="0.01" min="0">
+    <label class="inp-label">Category</label>
+    <select id="expCat">${EXPENSE_CATEGORIES.map(c=>`<option value="${c}" ${e&&e.category===c?'selected':''}>${c}</option>`).join('')}</select>
+    <label class="inp-label">Date</label>
+    <input type="date" id="expDate" value="${e?e.date:today}">
+    <div id="expErr" style="color:var(--rose);font-size:.78em;min-height:16px;margin:6px 0;font-weight:600"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn bd" onclick="closeModal()">Cancel</button>
+      <button class="btn bp" onclick="saveExpense(${id||'null'})">${e?'Save Changes':'Add Expense'}</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('expDesc')?.focus(),100);
+}
+
+function saveExpense(id){
+  const desc=(document.getElementById('expDesc')?.value||'').trim();
+  const amt=parseFloat(document.getElementById('expAmt')?.value)||0;
+  const cat=document.getElementById('expCat')?.value||'Other';
+  const date=document.getElementById('expDate')?.value||new Date().toISOString().split('T')[0];
+  const err=document.getElementById('expErr');
+  if(!desc){if(err)err.textContent='Description is required';return;}
+  if(amt<=0){if(err)err.textContent='Amount must be greater than zero';return;}
+  if(id&&id!=='null'){
+    const e=DB.getById('expenses',parseInt(id));
+    if(e){e.description=desc;e.amount=amt;e.category=cat;e.date=date;DB.update('expenses',e);}
+    logAct('Expense Updated',`${desc}: ${fc(amt)}`);
+  }else{
+    DB.add('expenses',{description:desc,amount:amt,category:cat,date,branchId:currentUser.branchId,recordedBy:currentUser.name});
+    logAct('Expense Added',`${desc}: ${fc(amt)}`);
+  }
+  closeModal();sw('expenses');toast('Expense saved ✓','emerald');
+}
+
+async function deleteExpense(id){
+  const e=DB.getById('expenses',id);if(!e)return;
+  const ok=await confirm2(`Delete expense "${e.description}" (${fc(e.amount)})?`,'🗑️',true);
+  if(!ok)return;
+  DB.delete('expenses',id);
+  logAct('Expense Deleted',`${e.description}: ${fc(e.amount)}`);
+  sw('expenses');toast('Expense deleted','gold');
+}
+
+function exportExpensesCSV(){
+  const all=getMyData('expenses').slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  let csv='Date,Description,Category,Amount\n';
+  all.forEach(e=>csv+=`${e.date||''},"${(e.description||'').replace(/"/g,"'")}",${e.category||'Other'},${(e.amount||0).toFixed(2)}\n`);
+  const tot=all.reduce((s,e)=>s+(e.amount||0),0);
+  csv+=`,,TOTAL,${tot.toFixed(2)}\n`;
+  const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=`expenses_${new Date().toISOString().split('T')[0]}.csv`;a.click();
+  toast('Expenses exported ✓','emerald');
+}
+
+// ════════════════════════════════════════════
+// FEATURE 2: PURCHASES BOOK (RR 9-2009)
+// Records all purchase transactions from
+// purchase orders and supplier invoices.
+// ════════════════════════════════════════════
+function renderPurchasesBook(el) {
+  const m = new Date().toISOString().substring(0, 7);
+  const bir = getBIR();
+  const pos = getMyData('purchaseOrders')
+    .filter(po => po.status === 'received' && po.date && po.date.startsWith(m))
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const suppliers = DB.getAll('suppliers');
+
+  let runTotal = 0;
+  const rows = pos.map((po, i) => {
+    const supplier = suppliers.find(s => s.id === po.supplierId);
+    const itemsTotal = (po.items || []).reduce((a, it) => a + (it.total || 0), 0);
+    const vatAmt = bir.vatType === 'vat' ? (itemsTotal / (1 + taxRate) * taxRate) : 0;
+    const netOfVat = itemsTotal - vatAmt;
+    runTotal += itemsTotal;
+    return `<tr>
+      <td>${po.date || ''}</td>
+      <td style="font-family:var(--fm);font-size:.9em">PO-${String(po.id).padStart(7,'0')}</td>
+      <td>${supplier ? supplier.name : 'N/A'}</td>
+      <td>${supplier ? (supplier.tin || '—') : '—'}</td>
+      <td>${fc(netOfVat)}</td>
+      <td>${fc(vatAmt)}</td>
+      <td>${fc(itemsTotal)}</td>
+      <td>${fc(runTotal)}</td>
+    </tr>`;
+  }).join('');
+
+  const totPurchases = pos.reduce((a, po) => a + (po.items||[]).reduce((b,it)=>b+(it.total||0),0), 0);
+  const totVat = bir.vatType === 'vat' ? totPurchases / (1 + taxRate) * taxRate : 0;
+  const totNet = totPurchases - totVat;
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h4 style="margin:0">📗 BIR Purchases Book</h4>
+      <span class="bir-badge">RR 9-2009</span>
+    </div>
+    <div class="card" style="border-left:3px solid var(--emerald);margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:.8em;margin-bottom:4px"><span style="color:var(--text2)">Business</span><span>${bir.name}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:.8em;margin-bottom:4px"><span style="color:var(--text2)">TIN</span><span style="font-family:var(--fm)">${bir.tin}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:.8em"><span style="color:var(--text2)">Period</span><span>${m}</span></div>
+    </div>
+    <div class="card" style="border:1px solid rgba(240,101,119,.2);margin-bottom:12px">
+      <p style="font-size:.78em;color:var(--text2);line-height:1.6">⚠️ Only received Purchase Orders are included. Ensure all supplier invoices are entered as POs before export.</p>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="bir-tbl">
+        <thead><tr>
+          <th>Date</th><th>PO No.</th><th>Supplier</th><th>Supplier TIN</th>
+          <th>Net of VAT</th><th>Input VAT</th><th>Total</th><th>Running Total</th>
+        </tr></thead>
+        <tbody>${rows || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text3)">No received POs this month</td></tr>'}</tbody>
+        <tfoot><tr>
+          <td colspan="4"><strong>TOTAL</strong></td>
+          <td>${fc(totNet)}</td><td>${fc(totVat)}</td>
+          <td>${fc(totPurchases)}</td><td>${fc(runTotal)}</td>
+        </tr></tfoot>
+      </table>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+      <button class="btn bp" onclick="exportPurchasesBook()">📥 Export CSV</button>
+      <button class="btn bw" onclick="printPurchasesBook()">🖨 Print</button>
+    </div>`;
+}
+
+function exportPurchasesBook() {
+  const m = new Date().toISOString().substring(0, 7);
+  const bir = getBIR();
+  const pos = getMyData('purchaseOrders')
+    .filter(po => po.status === 'received' && po.date && po.date.startsWith(m))
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const suppliers = DB.getAll('suppliers');
+  let runTotal = 0;
+  let csv = `PURCHASES BOOK / PURCHASES JOURNAL\n"Business: ${bir.name}"\n"TIN: ${bir.tin}"\n"Period: ${m}"\n\n`;
+  csv += `Date,PO No.,Supplier,Supplier TIN,Net of VAT,Input VAT (12%),Total,Running Total\n`;
+  pos.forEach(po => {
+    const supplier = suppliers.find(s => s.id === po.supplierId);
+    const total = (po.items || []).reduce((a, it) => a + (it.total || 0), 0);
+    const vatAmt = bir.vatType === 'vat' ? total / (1 + taxRate) * taxRate : 0;
+    const net = total - vatAmt;
+    runTotal += total;
+    csv += `${po.date||''},${'PO-'+String(po.id).padStart(7,'0')},"${supplier?supplier.name:'N/A'}","${supplier?supplier.tin||'—':'—'}",${net.toFixed(2)},${vatAmt.toFixed(2)},${total.toFixed(2)},${runTotal.toFixed(2)}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `PurchasesBook_${m}.csv`; a.click();
+  toast('Purchases Book exported ✓', 'emerald');
+}
+
+function printPurchasesBook() {
+  const m = new Date().toISOString().substring(0, 7);
+  const bir = getBIR();
+  const pos = getMyData('purchaseOrders')
+    .filter(po => po.status === 'received' && po.date && po.date.startsWith(m))
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const suppliers = DB.getAll('suppliers');
+  let runTotal = 0;
+  const rows = pos.map(po => {
+    const sup = suppliers.find(s => s.id === po.supplierId);
+    const total = (po.items || []).reduce((a, it) => a + (it.total || 0), 0);
+    const vatAmt = bir.vatType === 'vat' ? total / (1 + taxRate) * taxRate : 0;
+    const net = total - vatAmt;
+    runTotal += total;
+    return `<tr><td>${po.date||''}</td><td>PO-${String(po.id).padStart(7,'0')}</td><td>${sup?sup.name:'N/A'}</td><td>${sup?sup.tin||'—':'—'}</td><td>${fc(net)}</td><td>${fc(vatAmt)}</td><td>${fc(total)}</td><td>${fc(runTotal)}</td></tr>`;
+  }).join('');
+  const totP = pos.reduce((a, po) => a + (po.items||[]).reduce((b,it)=>b+(it.total||0),0), 0);
+  const totV = bir.vatType === 'vat' ? totP / (1 + taxRate) * taxRate : 0;
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+    @page{margin:15mm 10mm;size:A4 landscape}*{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:10px;color:#222}
+    h2{font-size:14px;margin-bottom:4px}.sub{font-size:10px;color:#666;margin-bottom:12px}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th{background:#1a4d2e;color:#fff;padding:7px 8px;text-align:center;font-size:9px;text-transform:uppercase}
+    td{padding:6px 8px;border:1px solid #ddd;font-size:10px}td:not(:first-child):not(:nth-child(2)):not(:nth-child(3)):not(:nth-child(4)){text-align:right}
+    tfoot td{font-weight:bold;background:#f5f5f5;border-top:2px solid #222}
+    </style></head><body>
+    <h2>PURCHASES JOURNAL / PURCHASES BOOK</h2>
+    <div class="sub">Business: ${bir.name} &nbsp;|&nbsp; TIN: ${bir.tin} &nbsp;|&nbsp; Period: ${m}</div>
+    <table>
+      <thead><tr><th>Date</th><th>PO No.</th><th>Supplier</th><th>Supplier TIN</th><th>Net of VAT</th><th>Input VAT</th><th>Total</th><th>Running Total</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="4">TOTAL</td><td>${fc(totP-totV)}</td><td>${fc(totV)}</td><td>${fc(totP)}</td><td>${fc(runTotal)}</td></tr></tfoot>
+    </table></body></html>`;
+  const frame = document.getElementById('printFrame');
+  const doc = frame.contentDocument || frame.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); }, 350);
+}
+
+// ════════════════════════════════════════════
+// FEATURE 3: AUDIT LOG BIR EXPORT
+// Formatted audit trail export for BIR inspection.
+// Covers all system events with timestamps.
+// ════════════════════════════════════════════
+function exportAuditLog() {
+  const bir = getBIR();
+  const logs = getMyData('activityLogs').sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  const dateRange = logs.length
+    ? `${logs[0].timestamp.split('T')[0]} to ${logs[logs.length-1].timestamp.split('T')[0]}`
+    : 'No records';
+
+  let csv = `BIR AUDIT TRAIL REPORT\n`;
+  csv += `"Business: ${bir.name}"\n"TIN: ${bir.tin}"\n"PTU: ${bir.ptu}"\n`;
+  csv += `"Period: ${dateRange}"\n"Generated: ${new Date().toLocaleString('en-PH')}"\n\n`;
+  csv += `Timestamp,User,Role,Branch,Action,Details\n`;
+  logs.forEach(l => {
+    csv += `"${new Date(l.timestamp).toLocaleString('en-PH')}","${l.userName||'System'}","${l.userRole||'—'}","${l.branchId?'Branch '+l.branchId:'Global'}","${l.action||''}","${(l.details||'').replace(/"/g,"'")}"\n`;
+  });
+  // Summary section
+  const actions = {};
+  logs.forEach(l => { actions[l.action] = (actions[l.action] || 0) + 1; });
+  csv += `\nAUDIT SUMMARY\nAction,Count\n`;
+  Object.entries(actions).sort((a,b) => b[1]-a[1]).forEach(([k,v]) => { csv += `"${k}",${v}\n`; });
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `AuditLog_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+  toast('Audit log exported ✓', 'emerald');
+  logAct('Audit Log Exported', `${logs.length} records exported`);
+}
+
+function renderAuditExport(el) {
+  const logs = getMyData('activityLogs');
+  const devLogs = logs.filter(l => l.action && l.action.includes('DEV'));
+  const voidLogs = logs.filter(l => l.action === 'VOID');
+  const saleLogs = logs.filter(l => l.action === 'Sale');
+  const pinLogs = logs.filter(l => l.action && l.action.includes('PIN'));
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h4 style="margin:0">📋 BIR Audit Trail Export</h4>
+      <span class="bir-badge">RMO 9-2009</span>
+    </div>
+    <div class="card" style="border-left:3px solid var(--blue);margin-bottom:12px">
+      <h5>Audit Summary</h5>
+      <div class="metrics">
+        <div class="met"><div class="met-v">${logs.length}</div><div class="met-l">Total Events</div></div>
+        <div class="met"><div class="met-v" style="color:var(--gold)">${saleLogs.length}</div><div class="met-l">Sales</div></div>
+        <div class="met"><div class="met-v" style="color:var(--rose)">${voidLogs.length}</div><div class="met-l">Voids</div></div>
+        <div class="met"><div class="met-v" style="color:var(--purple)">${devLogs.length}</div><div class="met-l">Dev Access</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <h5>Recent Events (last 20)</h5>
+      <div style="max-height:300px;overflow-y:auto">
+        ${logs.slice(-20).reverse().map(l=>`
+          <div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.78em">
+            <div style="font-weight:700;color:${l.action&&l.action.includes('DEV')?'var(--rose)':l.action==='VOID'?'var(--rose)':'var(--text)'}">
+              ${l.action}
+            </div>
+            <div style="color:var(--text2);font-size:.88em">${l.details||''}</div>
+            <div style="color:var(--text3);font-size:.82em;margin-top:2px">
+              ${l.userName||'System'} · ${new Date(l.timestamp).toLocaleString('en-PH')}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn bp" onclick="exportAuditLog()">📥 Export Full Audit CSV</button>
+      <button class="btn bw" onclick="sw('actLog')">📝 View Activity Log</button>
+    </div>`;
+}
+
+// ════════════════════════════════════════════
+// FEATURE 4: OFFLINE OR RESERVATION SYSTEM
+// Reserves a block of OR numbers for offline use.
+// Prevents duplicates when device goes offline.
+// Each device gets a unique non-overlapping block.
+// ════════════════════════════════════════════
+const OR_BLOCK_SIZE = 50; // reserve 50 ORs at a time
+
+async function reserveORBlock() {
+  // Only works when Firebase + Cloud Functions are available
+  if (!_fbFunctions || !isOnline) return null;
+  try {
+    const bir = getBIR();
+    const fn = _fbFunctions.httpsCallable(_fbFunctions.functions, 'getNextORNumber');
+    // Request a block by calling OR function OR_BLOCK_SIZE times would be wasteful
+    // Instead call once to get current counter, then reserve the block
+    const result = await fn({ prefix: bir.prefix, seriesTo: bir.serTo, blockSize: OR_BLOCK_SIZE });
+    const blockStart = result.data.counter - OR_BLOCK_SIZE + 1;
+    const blockEnd = result.data.counter;
+    const block = { start: blockStart, end: blockEnd, current: blockStart, prefix: bir.prefix, reservedAt: new Date().toISOString() };
+    saveSetting('or_reserved_block', JSON.stringify(block));
+    logAct('OR Block Reserved', `Block ${bir.prefix}-${String(blockStart).padStart(7,'0')} to ${bir.prefix}-${String(blockEnd).padStart(7,'0')}`);
+    toast(`✓ Reserved ${OR_BLOCK_SIZE} OR numbers for offline use`, 'emerald');
+    return block;
+  } catch(e) {
+    console.warn('OR block reservation failed:', e);
+    return null;
+  }
+}
+
+function getReservedBlock() {
+  try {
+    const raw = getSetting('or_reserved_block', '');
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function useReservedOR() {
+  const block = getReservedBlock();
+  if (!block || block.current > block.end) return null; // block exhausted
+  const orNum = block.prefix + '-' + String(block.current).padStart(7, '0');
+  block.current++;
+  saveSetting('or_reserved_block', JSON.stringify(block));
+  // Log when block is running low
+  const remaining = block.end - block.current + 1;
+  if (remaining <= 5) toast(`⚠️ Offline OR block almost exhausted (${remaining} left). Go online to reserve more.`, 'rose', 7000);
+  return orNum;
+}
+
+function clearReservedBlock() {
+  saveSetting('or_reserved_block', '');
+  toast('OR reservation block cleared', 'gold');
+}
+
+// Patch getORNumber to use reserved block when offline
+const _origGetORNumber = getORNumber;
+getORNumber = async function() {
+  // If online — use cloud function (original)
+  if (isOnline && _fbFunctions) return _origGetORNumber();
+  // If offline — try reserved block first
+  const reservedOR = useReservedOR();
+  if (reservedOR) {
+    console.log('Using reserved OR:', reservedOR);
+    return reservedOR;
+  }
+  // If no block available — fall back to local counter + warn
+  toast('⚠️ No OR block reserved. Using local counter. Sync when online to verify no duplicates.', 'rose', 8000);
+  return getNextOR();
+};
+
+// Auto-reserve block when coming back online
+window.addEventListener('online', async () => {
+  const block = getReservedBlock();
+  if (!block || block.current > block.end - 10) {
+    // Block exhausted or almost — reserve a new one
+    setTimeout(reserveORBlock, 2000);
+  }
+});
+
+function renderORReservation(el) {
+  const block = getReservedBlock();
+  const bir = getBIR();
+  const remaining = block ? block.end - block.current + 1 : 0;
+  const statusColor = !block ? 'var(--rose)' : remaining <= 5 ? 'var(--rose)' : remaining <= 20 ? '#fbb923' : 'var(--emerald)';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h4 style="margin:0">📶 Offline OR Reservation</h4>
+      <span class="bir-badge">Multi-Device Safe</span>
+    </div>
+    <div class="card" style="border-left:3px solid ${statusColor}">
+      <h5 style="color:${statusColor}">Current Block Status</h5>
+      ${block
+        ? `<div style="font-size:.82em;line-height:2">
+            <div><span style="color:var(--text2)">Reserved Range:</span> <span style="font-family:var(--fm)">${bir.prefix}-${String(block.start).padStart(7,'0')} → ${bir.prefix}-${String(block.end).padStart(7,'0')}</span></div>
+            <div><span style="color:var(--text2)">Next OR:</span> <span style="font-family:var(--fm)">${bir.prefix}-${String(block.current).padStart(7,'0')}</span></div>
+            <div><span style="color:var(--text2)">Remaining:</span> <span style="color:${statusColor};font-weight:700">${remaining} of ${OR_BLOCK_SIZE}</span></div>
+            <div><span style="color:var(--text2)">Reserved at:</span> ${new Date(block.reservedAt).toLocaleString('en-PH')}</div>
+           </div>`
+        : `<p style="font-size:.82em;color:var(--rose)">No OR block reserved. Device will use local counter when offline.</p>`
+      }
+    </div>
+    <div class="card" style="border:1px solid rgba(111,163,239,.2)">
+      <h5>How It Works</h5>
+      <p style="font-size:.78em;color:var(--text2);line-height:1.7">When online, the system uses the Firebase Cloud Function for atomic OR numbers (no duplicates). When offline, it uses a pre-reserved block of ${OR_BLOCK_SIZE} ORs unique to this device. Reserve a block while online — it lasts until exhausted.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+      <button class="btn bp" onclick="reserveORBlock().then(()=>sw('orReservation'))" ${!isOnline?'disabled':''}>
+        📶 Reserve New Block ${!isOnline?'(Offline)':''}
+      </button>
+      <button class="btn bd" onclick="confirm2('Clear OR reservation block?','📶',true).then(ok=>{if(ok){clearReservedBlock();sw('orReservation');}})" ${!block?'disabled':''}>
+        🗑 Clear Block
+      </button>
+    </div>
+    <p style="font-size:.7em;color:var(--text3);text-align:center;margin-top:8px">Network: ${isOnline?'🟢 Online':'🔴 Offline'} · Firebase: ${_fbFunctions?'✓':'✗'}</p>`;
+}
+
 // ════════════════════════════════════════════
 let _idb = null;
 const IDB_NAME = 'mlea_pos_v6';
-const IDB_VER = 2;
+const IDB_VER = 3;
 
 async function initIDB() {
   return new Promise((resolve, reject) => {
@@ -4090,6 +5019,10 @@ _finalizePay = async function(method, cashTendered, secondAmt) {
   };
 
   const saleId = DB.add('sales', sale);
+  // Attach receipt hash for tamper-evidence (async, non-blocking)
+  attachReceiptHash(saleId).then(hash => {
+    if (hash && lastSale) lastSale.receiptHash = hash;
+  });
   cart.forEach(item => {
     const p = LocalDB.getById('products', item.id);
     if (p) { p.stock -= item.quantity; LocalDB.update('products', p); if (storageMode === 'firebase') FirebaseDB.update('products', p); }
@@ -4163,17 +5096,19 @@ renderSidebar = function() {
   if (currentUser.role === 'admin' || currentUser.role === 'manager') {
     // Add customer + BIR books items if not already present
     if (!nav.innerHTML.includes('sw(\'customers\')')) {
-      const custItem = `<div class="sb-item" onclick="sw('customers')"><span class="sb-icon">👤</span>Customers</div>`;
-      const salesBookItem = `<div class="sb-item" onclick="sw('salesBook')"><span class="sb-icon">📒</span>Sales Book</div>`;
-      const form2550Item = `<div class="sb-item" onclick="sw('form2550M')"><span class="sb-icon">🏛️</span>Form 2550M</div>`;
-      // Insert after BIR Setup
-      nav.innerHTML = nav.innerHTML
-        .replace('sw(\'birSetup\')', `sw('birSetup')`)
-        + salesBookItem + form2550Item;
+      const custItem = `<div class="sb-item" onclick="sw('customers')"><span class="sb-icon">👤</span>Customers</div>`
+        + `<div class="sb-item" onclick="sw('expenses')"><span class="sb-icon">💸</span>Expenses</div>`;
+      const bookItems = `<div class="sb-item" onclick="sw('salesBook')"><span class="sb-icon">📒</span>Sales Book</div>`
+        + `<div class="sb-item" onclick="sw('purchasesBook')"><span class="sb-icon">📗</span>Purchases Book</div>`
+        + `<div class="sb-item" onclick="sw('form2550M')"><span class="sb-icon">🏛️</span>Form 2550M</div>`
+        + `<div class="sb-item" onclick="sw('auditExport')"><span class="sb-icon">📋</span>Audit Export</div>`
+        + (currentUser.role === 'admin' ? `<div class="sb-item" onclick="sw('orReservation')"><span class="sb-icon">📶</span>OR Reservation</div>` : '');
+      // Append BIR book items after BIR Setup section
+      nav.innerHTML = nav.innerHTML + bookItems;
       // Insert customers after users
       nav.innerHTML = nav.innerHTML.replace(
-        /(<div class="sb-item" onclick="sw\('(allUsers|myUsers)'\)">)/,
-        `$1</div>${custItem}<div style="display:none">`
+        /(<div class="sb-item" onclick="sw\('(allUsers|myUsers)'\)">[\s\S]*?<\/div>)/,
+        `$1${custItem}`
       );
     }
   }
@@ -4185,6 +5120,10 @@ renderSidebar = function() {
 viewMap.customers = renderCustomers;
 viewMap.salesBook = renderSalesBook;
 viewMap.form2550M = render2550M;
+viewMap.purchasesBook = renderPurchasesBook;
+viewMap.auditExport = renderAuditExport;
+viewMap.orReservation = renderORReservation;
+viewMap.expenses = renderExpenses;
 
 // ════════════════════════════════════════════
 // PATCH: renderSettings — add Phase 3/4 settings
@@ -4293,6 +5232,8 @@ initApp = async function() {
   updateSyncBar();
 };
 
+// Apply saved font size immediately (before any screen renders)
+try{applyFontSize(getFontSize());}catch(e){}
 showLicGate(); // ✓ now calls the fully patched initApp
 </script>
 </body>
